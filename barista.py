@@ -56,6 +56,11 @@ def convert_order_to_string(order_code):
 
     return order_string, this_items_list[0]["status"]
 
+def change_orders_status(order_code, status):
+    for order in orders_list:
+        if order["code"] == order_code:
+            order["status"] = status
+
 def convert_status(status):
     if status == 'new':
         return 'Новый'
@@ -96,11 +101,11 @@ def order(message):
             keyboard = types.InlineKeyboardMarkup()
 
             if status == 'new':
-                key = types.InlineKeyboardButton(text='В процессе', callback_data=f'in_process')
+                key = types.InlineKeyboardButton(text='В процессе', callback_data=f'in_process {order_code}')
             elif status == 'in process':
-                key = types.InlineKeyboardButton(text='Ожидание', callback_data=f'waiting')
+                key = types.InlineKeyboardButton(text='Ожидание', callback_data=f'waiting {order_code}')
             elif status == 'waiting':
-                key = types.InlineKeyboardButton(text='Завершен', callback_data=f'completed')
+                key = types.InlineKeyboardButton(text='Завершен', callback_data=f'completed {order_code}')
 
             try:
                 keyboard.add(key)
@@ -111,5 +116,25 @@ def order(message):
         error_string = f'Команда {message.text} не найдена. ' \
                        f'Обратитесь к /help, чтобы получить список доступных команд'
         bot.send_message(message.chat.id, error_string)
+
+# функция для обработки кнопок
+@bot.callback_query_handler(func=lambda call: True)
+def callback_worker(call):
+    callback_data = call.data.split()
+
+    state = callback_data[0]
+    order_code = int(callback_data[1])
+
+    if state == "in_process":
+        change_orders_status(order_code, 'in process')
+        bot.send_message(call.message.chat.id, f'Заказ /{order_code} в процессе')
+
+    elif state == "waiting":
+        change_orders_status(order_code, 'waiting')
+        bot.send_message(call.message.chat.id, f'Заказ /{order_code} завершен и ждет получателя')
+
+    elif state == "completed":
+        change_orders_status(order_code, 'completed')
+        bot.send_message(call.message.chat.id, f'Заказ /{order_code} получен')
 
 bot.polling(none_stop=True)
