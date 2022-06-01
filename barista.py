@@ -54,7 +54,7 @@ def convert_order_to_string(order_code):
     order_string = f'Заказ: {", ".join(names_list)} | Время: {this_items_list[0]["time"]} ' \
                    f'| Статус: {convert_status(this_items_list[0]["status"])}\n'
 
-    return order_string
+    return order_string, this_items_list[0]["status"]
 
 def convert_status(status):
     if status == 'new':
@@ -87,13 +87,26 @@ def orders(message):
 def order(message):
     try:
         order_code = int(message.text[1:])
-        order_string = convert_order_to_string(order_code)
+        order_string, status = convert_order_to_string(order_code)
 
         if order_string == None:
             error_string = f'Заказ с кодом {order_code} не найден'
             bot.send_message(message.chat.id, error_string)
         else:
-            bot.send_message(message.chat.id, convert_order_to_string(order_code))
+            keyboard = types.InlineKeyboardMarkup()
+
+            if status == 'new':
+                key = types.InlineKeyboardButton(text='В процессе', callback_data=f'in_process')
+            elif status == 'in process':
+                key = types.InlineKeyboardButton(text='Ожидание', callback_data=f'waiting')
+            elif status == 'waiting':
+                key = types.InlineKeyboardButton(text='Завершен', callback_data=f'completed')
+
+            try:
+                keyboard.add(key)
+                bot.send_message(message.chat.id, convert_order_to_string(order_code), reply_markup=keyboard)
+            except:
+                bot.send_message(message.chat.id, convert_order_to_string(order_code))
     except:
         error_string = f'Команда {message.text} не найдена. ' \
                        f'Обратитесь к /help, чтобы получить список доступных команд'
