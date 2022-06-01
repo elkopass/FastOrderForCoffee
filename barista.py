@@ -29,16 +29,28 @@ def convert_orders_list_to_string(orders_list):
         # записываем одинаковые заказы в один список
         same_order = [o for o in filtered_orders_list if o['code'] == orders]
 
-        # достаем список кофе из одного заказа
-        coffee_list = []
+        # достаем список названий элементов из одного заказа
+        names_list = []
         for order in same_order:
-            coffee_list.append(order['name'])
+            names_list.append(order['name'])
 
         # формируем отформатированный список
-        orders_string += f'/{same_order[0]["code"]} | Кофе: {", ".join(coffee_list)} ' \
+        orders_string += f'/{same_order[0]["code"]} | Заказ: {", ".join(names_list)} ' \
                          f'| Время: {same_order[0]["time"]} | Статус: {convert_status(same_order[0]["status"])}\n'
 
     return orders_string
+
+def convert_order_to_string(order_code):
+    # получаем список элементов заказа с соответствующим кодом
+    this_items_list = [order for order in orders_list if order["code"] == order_code]
+
+    # достаем список названий элементов из заказа
+    names_list = [order["name"] for order in this_items_list]
+
+    order_string = f'Заказ: {", ".join(names_list)} | Время: {this_items_list[0]["time"]} ' \
+                   f'| Статус: {convert_status(this_items_list[0]["status"])}\n'
+
+    return order_string
 
 def convert_status(status):
     if status == 'new':
@@ -65,5 +77,11 @@ def help(message):
 @bot.message_handler(commands=['orders'])
 def orders(message):
     bot.send_message(message.chat.id, convert_orders_list_to_string(orders_list))
+
+# команда для полученя заказа по его коду
+@bot.message_handler()
+def order(message):
+    order_code = int(message.text[1:])
+    bot.send_message(message.chat.id, convert_order_to_string(order_code))
 
 bot.polling(none_stop=True)
