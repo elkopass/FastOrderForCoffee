@@ -44,6 +44,10 @@ def convert_order_to_string(order_code):
     # получаем список элементов заказа с соответствующим кодом
     this_items_list = [order for order in orders_list if order["code"] == order_code]
 
+    # если заказа с данным кодом не существует, возвращаем None
+    if len(this_items_list) == 0:
+        return None
+
     # достаем список названий элементов из заказа
     names_list = [order["name"] for order in this_items_list]
 
@@ -81,7 +85,18 @@ def orders(message):
 # команда для полученя заказа по его коду
 @bot.message_handler()
 def order(message):
-    order_code = int(message.text[1:])
-    bot.send_message(message.chat.id, convert_order_to_string(order_code))
+    try:
+        order_code = int(message.text[1:])
+        order_string = convert_order_to_string(order_code)
+
+        if order_string == None:
+            error_string = f'Заказ с кодом {order_code} не найден'
+            bot.send_message(message.chat.id, error_string)
+        else:
+            bot.send_message(message.chat.id, convert_order_to_string(order_code))
+    except:
+        error_string = f'Команда {message.text} не найдена. ' \
+                       f'Обратитесь к /help, чтобы получить список доступных команд'
+        bot.send_message(message.chat.id, error_string)
 
 bot.polling(none_stop=True)
