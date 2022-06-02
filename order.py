@@ -1,18 +1,34 @@
 
 from array import array
 from statistics import median
+import struct
 import telebot
 from telebot import types
 from datetime import datetime
 
 bot = telebot.TeleBot('5240548361:AAEbvuwJy3-ErEJ3WeepU8zsYOUdw0u3dHw')
+class Order:
+    def __init__(self, id, code, arrayOfPositions , status, time): 
+        self.id = id 
+        self.code = code
+        self.arrayOfPositions = arrayOfPositions
+        self.status = status
+        self.time = time
+ 
+    def display(self): 
+        print("ID: %d nName: %s" % (self.id, self.code)) 
 
+int1 = Order(2, 5,3 ,3 ,3)
+int1.display()
+    
 @bot.message_handler(commands=['menu'])
 def menu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard= True)
     item1 = types.KeyboardButton("Кофе")
     item2 = types.KeyboardButton("Холодные напитки")
     item3 = types.KeyboardButton("Закуски")
+    item4 = types.KeyboardButton("Сделать заказ")
+    item5 = types.KeyboardButton("Редактировать заказ")
 
     markup.add(item1, item2, item3)
 
