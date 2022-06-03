@@ -50,12 +50,36 @@ def get_price(message):
         keyboard = types.InlineKeyboardMarkup()
 
         key_yes = types.InlineKeyboardButton(text='Подтвердить', callback_data='confirm')
-        keyboard.add(key_yes);
+        keyboard.add(key_yes)
 
-        key_no = types.InlineKeyboardButton(text='Отменить', callback_data='cancel');
-        keyboard.add(key_no);
+        key_no = types.InlineKeyboardButton(text='Отменить', callback_data='cancel')
+        keyboard.add(key_no)
 
         item_string = f'Название: {name}\nЦена: {price}рублей\n\nВсе правильно?'
         bot.send_message(message.chat.id, item_string, reply_markup=keyboard)
+
+# функция для обработки кнопок
+@bot.callback_query_handler(func=lambda call: True)
+def callback_worker(call):
+    if call.data == 'confirm':
+        global name, price
+
+        item = {
+            'id': menu[-1]['id'] + 1,
+            'name': name,
+            'price': price
+        }
+        menu.append(item)
+
+        bot.send_message(call.message.chat.id, f'{name} добавлен в меню')
+
+        name = ''
+        price = 0
+    elif call.data == 'cancel':
+        name = ''
+        price = 0
+        bot.send_message(call.message.chat.id, 'Операция отменена')
+
+    bot.answer_callback_query(call.id)
 
 bot.polling(none_stop=True)
