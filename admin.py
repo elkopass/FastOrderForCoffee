@@ -5,7 +5,7 @@ bot = telebot.TeleBot('5240548361:AAEbvuwJy3-ErEJ3WeepU8zsYOUdw0u3dHw')
 
 users_list = [
     {'id': 0, 'role': 'Администратор'},
-    {'id': 1, 'role': 'Ползователь'},
+    {'id': 1, 'role': 'Пользователь'},
     {'id': 2, 'role': 'Бариста'}
 ]
 
@@ -89,6 +89,34 @@ def users(message):
 
     bot.send_message(message.chat.id, users_string)
 
+@bot.message_handler(commands=['user'])
+def user(message):
+    id = int(message.text.split()[1])
+    idx = -1
+
+    for i, u in enumerate(users_list):
+        if u["id"] == id:
+            idx = i
+
+    if idx == -1:
+        bot.send_message(message.chat.id, f'Пользователь с id = {id} не найден')
+    else:
+        role = users_list[idx]["role"]
+
+        keyboard = types.InlineKeyboardMarkup()
+
+        if role != 'Администратор':
+            key_admin = types.InlineKeyboardButton(text='Назначить администратором', callback_data=f'admin {idx}')
+            keyboard.add(key_admin)
+        if role != 'Бариста':
+            key_barista = types.InlineKeyboardButton(text='Назначить баристой', callback_data=f'barista {idx}')
+            keyboard.add(key_barista)
+        if role != 'Пользователь':
+            key_user = types.InlineKeyboardButton(text='Назначить пользователем', callback_data=f'user {idx}')
+            keyboard.add(key_user)
+
+        bot.send_message(message.chat.id, f'Роль пользователя: {role}', reply_markup=keyboard)
+
 @bot.message_handler()
 def commands(message):
     id = int(message.text[1:])
@@ -165,6 +193,17 @@ def callback_worker(call):
         bot.send_message(call.message.chat.id, 'Введите цену')
         bot.register_next_step_handler(call.message, edit_price, int(callback_data[1]))
 
+    elif callback_data[0] == 'admin':
+        users_list[int(callback_data[1])]["role"] = 'Администратор'
+        bot.send_message(call.message.chat.id, 'Роль изменена')
+
+    elif callback_data[0] == 'barista':
+        users_list[int(callback_data[1])]["role"] = 'Бариста'
+        bot.send_message(call.message.chat.id, 'Роль изменена')
+
+    elif callback_data[0] == 'user':
+        users_list[int(callback_data[1])]["role"] = 'Пользователь'
+        bot.send_message(call.message.chat.id, 'Роль изменена')
 
     bot.answer_callback_query(call.id)
 
