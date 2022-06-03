@@ -53,7 +53,7 @@ def get_price(message):
         bot.send_message(message.chat.id, 'Введите цену корректно')
         bot.register_next_step_handler(message, get_price)
     else:
-        price = message.text
+        price = int(message.text)
 
         keyboard = types.InlineKeyboardMarkup()
 
@@ -65,6 +65,14 @@ def get_price(message):
 
         item_string = f'Название: {name}\nЦена: {price}рублей\n\nВсе правильно?'
         bot.send_message(message.chat.id, item_string, reply_markup=keyboard)
+
+def edit_price(message, idx):
+    if int(message.text) < 2 or int(message.text) >= 10000:
+        bot.send_message(message.chat.id, 'Введите цену корректно')
+        bot.register_next_step_handler(message, edit_price, idx)
+    else:
+        menu[idx]["price"] = int(message.text)
+        bot.send_message(message.chat.id, 'Изменения сохранены')
 
 @bot.message_handler()
 def commands(message):
@@ -137,6 +145,10 @@ def callback_worker(call):
     elif callback_data[0] == 'edit_name':
         bot.send_message(call.message.chat.id, 'Введите название')
         bot.register_next_step_handler(call.message, edit_name, int(callback_data[1]))
+
+    elif callback_data[0] == 'edit_price':
+        bot.send_message(call.message.chat.id, 'Введите цену')
+        bot.register_next_step_handler(call.message, edit_price, int(callback_data[1]))
 
 
     bot.answer_callback_query(call.id)
