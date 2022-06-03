@@ -38,6 +38,14 @@ def get_name(message):
         bot.send_message(message.chat.id, 'Введите цену')
         bot.register_next_step_handler(message, get_price)
 
+def edit_name(message, idx):
+    if len(message.text) < 3 or len(message.text) > 30:
+        bot.send_message(message.chat.id, 'Введите название корректно')
+        bot.register_next_step_handler(message, edit_name, idx)
+    else:
+        menu[idx]["name"] = message.text
+        bot.send_message(message.chat.id, 'Изменения сохранены')
+
 def get_price(message):
     global price
 
@@ -76,6 +84,9 @@ def commands(message):
     else:
         keyboard = types.InlineKeyboardMarkup()
 
+        key_edit = types.InlineKeyboardButton(text='Изменить', callback_data=f'edit {idx}')
+        keyboard.add(key_edit)
+
         key_delete = types.InlineKeyboardButton(text='Удалить', callback_data=f'delete {idx}')
         keyboard.add(key_delete)
 
@@ -101,13 +112,32 @@ def callback_worker(call):
 
         name = ''
         price = 0
+
     elif callback_data[0] == 'cancel':
         name = ''
         price = 0
         bot.send_message(call.message.chat.id, 'Операция отменена')
+
     elif callback_data[0] == 'delete':
         menu.pop(int(callback_data[1]))
         bot.send_message(call.message.chat.id, 'Элемент удален')
+
+    elif callback_data[0] == 'edit':
+        idx = int(callback_data[1])
+        keyboard = types.InlineKeyboardMarkup()
+
+        key_edit_name = types.InlineKeyboardButton(text='Изменить название', callback_data=f'edit_name {idx}')
+        keyboard.add(key_edit_name)
+
+        key_edit_price = types.InlineKeyboardButton(text='Именить цену', callback_data=f'edit_price {idx}')
+        keyboard.add(key_edit_price)
+
+        bot.send_message(call.message.chat.id, 'Что вы хотите изменить?', reply_markup=keyboard)
+
+    elif callback_data[0] == 'edit_name':
+        bot.send_message(call.message.chat.id, 'Введите название')
+        bot.register_next_step_handler(call.message, edit_name, int(callback_data[1]))
+
 
     bot.answer_callback_query(call.id)
 
