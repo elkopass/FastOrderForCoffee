@@ -15,6 +15,8 @@ from datetime import datetime
 from sqlalchemy import insert, select
 from sqlalchemy import  create_engine
 
+ordersORM = dict()
+
 engine = create_engine('sqlite:///sqlite3.db')
 
 engine.connect()
@@ -116,8 +118,8 @@ class Order:
         self.arrayOfPositions.append(position)
 
 
-order = Order(2, 5,[] ,"new" , "00:00")
-order.display()
+# order = Order(2, 5,[] ,"new" , "00:00")
+# order.display()
 def sendOrder(Order):
     ## send order
     print("Order is send") 
@@ -174,7 +176,6 @@ def help(message):
     
 @bot.message_handler(content_types=['text'])
 def bot_message(message):
-    cap = 0
     if message.chat.type == 'private':
         if message.text == 'Кофе':
             markup = types.ReplyKeyboardMarkup(resize_keyboard= True)
@@ -244,8 +245,11 @@ def bot_message(message):
             key4 = types.InlineKeyboardButton(text='Сэндвич 130 рублей', callback_data= "gg")
             key5 = types.InlineKeyboardButton(text='Шоколадный Маффин 30 рублей', callback_data= "gg")
 
-            keyboard.add(key1, key2, key3, key4, key5)
-
+            keyboard.add(key1)
+            keyboard.add(key2)
+            keyboard.add(key3)
+            keyboard.add(key4)
+            keyboard.add(key5)
             bot.send_message(message.chat.id, 'Посмотреть меню', reply_markup=keyboard)
             bot.delete_message(message.chat.id, message.id)
         
@@ -256,34 +260,51 @@ def bot_message(message):
             markup.add(item1, item2)
 
             keyboard = types.InlineKeyboardMarkup()
-            key1 = types.InlineKeyboardButton(text='Добавить Капучино', callback_data= "gg")
-            key2 = types.InlineKeyboardButton(text='Убрать Капучино', callback_data= "gg")
+            key1 = types.InlineKeyboardButton(text='Добавить Капучино', callback_data= f"add {message.chat.id}")
+            key2 = types.InlineKeyboardButton(text='Убрать Капучино', callback_data= f"rem {message.chat.id}")
             keyboard.add(key1, key2)
 
-            bot.send_message(message.chat.id, 'Сделать заказ', reply_markup=keyboard)
+            ordersORM[message.chat.id] = []
+            bot.send_message(message.chat.id, 'Выберите позицию', reply_markup=keyboard)
             
 
-            bot.send_message(message.chat.id, 'Сделать заказ', reply_markup= markup)
-            bot.delete_message(message.chat.id, message.id)
-        elif message.text == 'Добавить капучино':
-            cap += 1
-            bot.send_message(message.chat.id, 'Добавить капучино')
-            bot.delete_message(message.chat.id, message.id)
+            bot.send_message(message.chat.id, "Чикибамбони:",  reply_markup= markup)
+            bot.delete_message(message.chat.id ,message.id)
 
-        elif message.text == 'Удалить  капучино':
-            if(cap < 1):
-               
-                bot.send_message(message.chat.id, 'У вас и так нет капучино в заказе')
-            else:
-                cap -= 1
-                
-                
-            bot.send_message(message.chat.id, 'Удалить капучино')
-            bot.delete_message(message.chat.id, message.id)
+       
 
         elif message.text == 'Посмотреть заказ':
-            print(cap)
-            bot.send_message(message.chat.id, 'Посмотреть заказ')
+            print(ordersORM[message.chat.id])
+            tmp = ""
+            for i in ordersORM[message.chat.id]:
+                tmp += f"{i}\n"
+            bot.send_message(message.chat.id, tmp)
+            
+            bot.delete_message(message.chat.id, message.id)
 
+        elif message.text == 'Отправить заказ':
+            sendOrder(ordersORM[message.chat.id])
+            bot.delete_message(message.chat.id, message.id)
+
+# функция для обработки кнопок
+@bot.callback_query_handler(func=lambda call: True)
+def callback_worker(call):
+    state = call.data.split()[0]
+    id = int(call.data.split()[1])
+    if state == "add":  
+        ordersORM[id].append('Kапучино')
+    elif state == "rem":
+        if (('Kапучино' in ordersORM[id]) == False):
+            
+                bot.send_message(id, 'У вас и так нет капучино в заказе')
+        else:
+            ordersORM[id].remove('Kапучино')
+
+    print(ordersORM[id])
+    print(id)
+    bot.answer_callback_query(call.id)
+    
+    
+   
 
 bot.polling(non_stop= True)
