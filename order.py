@@ -1,15 +1,11 @@
-from array import array
 from audioop import add
-from enum import auto
 from statistics import median
-import struct
 from turtle import pos, width
 import telebot
 from telebot import types
 from datetime import datetime
 import sqlite3
 from sqlite3 import Error
-
 from sqlalchemy import MetaData, Table, String, Integer, Column, Text, DateTime, Boolean, ForeignKey
 from datetime import datetime
 from sqlalchemy import insert, select
@@ -161,19 +157,7 @@ def help(message):
     bot.send_message(message.chat.id, help_string, parse_mode='html')
 
 
-# @bot.message_handler(commands=['menu'])
-# def menu(message):
-#     markup = types.ReplyKeyboardMarkup(resize_keyboard= True)
-#     item1 = types.KeyboardButton("Кофе")
-#     item2 = types.KeyboardButton("Холодные напитки")
-#     item3 = types.KeyboardButton("Закуски")
-#     item4 = types.KeyboardButton("Сделать заказ")
-#     item5 = types.KeyboardButton("Редактировать заказ")
 
-#     markup.add(item1, item2, item3, item4, item5)
-
-#     bot.send_message(message.chat.id, 'Выбери'.format(message.from_user), reply_markup= markup)
-    
 @bot.message_handler(content_types=['text'])
 def bot_message(message):
     if message.chat.type == 'private':
@@ -273,7 +257,7 @@ def bot_message(message):
 
        
 
-        elif message.text == 'Посмотреть заказ':
+        elif message.text == 'Посмотреть заказ ':
             print(ordersORM[message.chat.id])
             tmp = ""
             for i in ordersORM[message.chat.id]:
