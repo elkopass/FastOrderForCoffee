@@ -29,23 +29,33 @@ def add(message):
 
 def get_name(message):
     global name
-    name = message.text
-    bot.send_message(message.chat.id, 'Введите цену')
-    bot.register_next_step_handler(message, get_price)
+
+    if len(message.text) < 3 or len(message.text) > 30:
+        bot.send_message(message.chat.id, 'Введите название корректно')
+        bot.register_next_step_handler(message, get_name)
+    else:
+        name = message.text.title()
+        bot.send_message(message.chat.id, 'Введите цену')
+        bot.register_next_step_handler(message, get_price)
 
 def get_price(message):
     global price
-    price = message.text
 
-    keyboard = types.InlineKeyboardMarkup()
+    if int(message.text) < 2 or int(message.text) >= 10000:
+        bot.send_message(message.chat.id, 'Введите цену корректно')
+        bot.register_next_step_handler(message, get_price)
+    else:
+        price = message.text
 
-    key_yes = types.InlineKeyboardButton(text='Подтвердить', callback_data='confirm')
-    keyboard.add(key_yes);
+        keyboard = types.InlineKeyboardMarkup()
 
-    key_no = types.InlineKeyboardButton(text='Отменить', callback_data='cancel');
-    keyboard.add(key_no);
+        key_yes = types.InlineKeyboardButton(text='Подтвердить', callback_data='confirm')
+        keyboard.add(key_yes);
 
-    item_string = f'Название: {name}\nЦена: {price}рублей\n\nВсе правильно?'
-    bot.send_message(message.chat.id, item_string, reply_markup=keyboard)
+        key_no = types.InlineKeyboardButton(text='Отменить', callback_data='cancel');
+        keyboard.add(key_no);
+
+        item_string = f'Название: {name}\nЦена: {price}рублей\n\nВсе правильно?'
+        bot.send_message(message.chat.id, item_string, reply_markup=keyboard)
 
 bot.polling(none_stop=True)
