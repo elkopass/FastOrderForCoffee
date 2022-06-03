@@ -58,10 +58,36 @@ def get_price(message):
         item_string = f'Название: {name}\nЦена: {price}рублей\n\nВсе правильно?'
         bot.send_message(message.chat.id, item_string, reply_markup=keyboard)
 
+@bot.message_handler()
+def commands(message):
+    id = int(message.text[1:])
+
+    idx = -1
+    this_item = None
+
+    for i, item in enumerate(menu):
+        if item['id'] == id:
+            idx = i
+            this_item = item
+            break
+
+    if idx == -1:
+        bot.send_message(message.chat.id, f'Заказ с id = {id} не найден')
+    else:
+        keyboard = types.InlineKeyboardMarkup()
+
+        key_delete = types.InlineKeyboardButton(text='Удалить', callback_data=f'delete {idx}')
+        keyboard.add(key_delete)
+
+        this_item_string = f'Название: {this_item["name"]} | Цена: {this_item["price"]}'
+        bot.send_message(message.chat.id, this_item_string, reply_markup=keyboard)
+
 # функция для обработки кнопок
 @bot.callback_query_handler(func=lambda call: True)
 def callback_worker(call):
-    if call.data == 'confirm':
+    callback_data = call.data.split()
+
+    if callback_data[0] == 'confirm':
         global name, price
 
         item = {
@@ -75,10 +101,13 @@ def callback_worker(call):
 
         name = ''
         price = 0
-    elif call.data == 'cancel':
+    elif callback_data[0] == 'cancel':
         name = ''
         price = 0
         bot.send_message(call.message.chat.id, 'Операция отменена')
+    elif callback_data[0] == 'delete':
+        menu.pop(int(callback_data[1]))
+        bot.send_message(call.message.chat.id, 'Элемент удален')
 
     bot.answer_callback_query(call.id)
 
