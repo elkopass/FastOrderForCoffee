@@ -3,6 +3,12 @@ from telebot import types
 
 bot = telebot.TeleBot('5240548361:AAEbvuwJy3-ErEJ3WeepU8zsYOUdw0u3dHw')
 
+users_list = [
+    {'id': 0, 'role': 'Администратор'},
+    {'id': 1, 'role': 'Ползователь'},
+    {'id': 2, 'role': 'Бариста'}
+]
+
 menu = [
     {'id': 0, 'name': 'Капучино', 'price': 75}
 ]
@@ -73,6 +79,15 @@ def edit_price(message, idx):
     else:
         menu[idx]["price"] = int(message.text)
         bot.send_message(message.chat.id, 'Изменения сохранены')
+
+@bot.message_handler(commands=['users'])
+def users(message):
+    users_string = ''
+
+    for user in users_list:
+        users_string += f'Id: {user["id"]} | Роль: {user["role"]}\n'
+
+    bot.send_message(message.chat.id, users_string)
 
 @bot.message_handler()
 def commands(message):
