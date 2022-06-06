@@ -1,5 +1,6 @@
 import telebot
 from telebot import types
+import sqlite3
 
 bot = telebot.TeleBot('5240548361:AAEbvuwJy3-ErEJ3WeepU8zsYOUdw0u3dHw')
 
@@ -80,12 +81,25 @@ def edit_price(message, idx):
         menu[idx]["price"] = int(message.text)
         bot.send_message(message.chat.id, 'Изменения сохранены')
 
+def convert_role_id_to_string(role_id):
+    if role_id == 1:
+        return 'Администратор'
+    elif role_id == 2:
+        return 'Бариста'
+    elif role_id == 3:
+        return 'Пользователь'
+
 @bot.message_handler(commands=['users'])
 def users(message):
+    conn = sqlite3.connect('sqlite3.db')
+    cursor = conn.cursor()
+
+    query = 'select userId, roleId from users'
+    users_list = cursor.execute(query).fetchall()
     users_string = ''
 
     for user in users_list:
-        users_string += f'Id: {user["id"]} | Роль: {user["role"]}\n'
+        users_string += f'Id: {user[0]} | Роль: {convert_role_id_to_string(int(user[1]))}\n'
 
     bot.send_message(message.chat.id, users_string)
 
