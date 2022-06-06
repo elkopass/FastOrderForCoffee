@@ -6,12 +6,12 @@ from sqlite3 import Error
 bot = telebot.TeleBot('5240548361:AAEbvuwJy3-ErEJ3WeepU8zsYOUdw0u3dHw')
 
 orders_list = [
-    {'id': 4, 'code': 73872304, 'name': 'Капучино', 'status': 'new', 'time': '14:30' },
-    {'id': 5, 'code': 73872304, 'name': 'Эспрессо', 'status': 'new', 'time': '14:30'},
-    {'id': 0, 'code': 89374287, 'name': 'Американо', 'status': 'completed', 'time': '14:15'},
-    {'id': 3, 'code': 37593577, 'name': 'Капучино', 'status': 'new', 'time': '14:28'},
-    {'id': 1, 'code': 37465027, 'name': 'Латте', 'status': 'in process', 'time': '14:20'},
-    {'id': 2, 'code': 37465027, 'name': 'Латте', 'status': 'in process', 'time': '14:20'}
+    # {'id': 4, 'code': 73872304, 'name': 'Капучино', 'status': 'new', 'time': '14:30' },
+    # {'id': 5, 'code': 73872304, 'name': 'Эспрессо', 'status': 'new', 'time': '14:30'},
+    # {'id': 0, 'code': 89374287, 'name': 'Американо', 'status': 'completed', 'time': '14:15'},
+    # {'id': 3, 'code': 37593577, 'name': 'Капучино', 'status': 'new', 'time': '14:28'},
+    # {'id': 1, 'code': 37465027, 'name': 'Латте', 'status': 'in process', 'time': '14:20'},
+    # {'id': 2, 'code': 37465027, 'name': 'Латте', 'status': 'in process', 'time': '14:20'}
 ]
 
 
@@ -19,26 +19,26 @@ def convert_orders_list_to_string(orders_list):
     orders_string = ''
 
     # сначала идут новые заказы
-    sorted_orders_list = sorted(orders_list, key=lambda order: order['time'], reverse=True)
+    sorted_orders_list = sorted(orders_list, key=lambda order: order[-1], reverse=True)
 
     # убираем завершенные заказы
-    filtered_orders_list = [order for order in sorted_orders_list if order['status'] != 'completed']
+    filtered_orders_list = [order for order in sorted_orders_list if order[-2] != 'completed']
 
     # получаем список уникальных кодов
-    orders_by_code = list(set([x['code'] for x in filtered_orders_list]))
+    orders_by_code = list(set([x[0] for x in filtered_orders_list]))
 
     for orders in orders_by_code:
         # записываем одинаковые заказы в один список
-        same_order = [o for o in filtered_orders_list if o['code'] == orders]
+        same_order = [o for o in filtered_orders_list if o[0] == orders]
 
         # достаем список названий элементов из одного заказа
         names_list = []
         for order in same_order:
-            names_list.append(order['name'])
+            names_list.append(order[2])
 
         # формируем отформатированный список
-        orders_string += f'/{same_order[0]["code"]} | Заказ: {", ".join(names_list)} ' \
-                         f'| Время: {same_order[0]["time"]} | Статус: {convert_status(same_order[0]["status"])}\n'
+        orders_string += f'/{same_order[0][0]} | Заказ: {", ".join(names_list)} ' \
+                         f'| Время: {same_order[0][-1]} | Статус: {convert_status(same_order[0][-2])}\n'
 
     return orders_string
 
@@ -97,9 +97,7 @@ def orders(message):
     join positions
         on pos_ord.pos_id = positions.id
     '''
-    orders_query = cursor.execute(query)
-    print(orders_query.fetchall())
-
+    orders_list = cursor.execute(query).fetchall()
     bot.send_message(message.chat.id, convert_orders_list_to_string(orders_list))
 
 # команда для полученя заказа по его коду
