@@ -105,28 +105,30 @@ def users(message):
 
 @bot.message_handler(commands=['user'])
 def user(message):
+    conn = sqlite3.connect('sqlite3.db')
+    cursor = conn.cursor()
+
     id = int(message.text.split()[1])
-    idx = -1
 
-    for i, u in enumerate(users_list):
-        if u["id"] == id:
-            idx = i
+    query = f'select userId, roleId from users where userId = {id}'
 
-    if idx == -1:
+    this_user = cursor.execute(query).fetchone()
+
+    if this_user == None:
         bot.send_message(message.chat.id, f'Пользователь с id = {id} не найден')
     else:
-        role = users_list[idx]["role"]
+        role = convert_role_id_to_string(int(this_user[1]))
 
         keyboard = types.InlineKeyboardMarkup()
 
         if role != 'Администратор':
-            key_admin = types.InlineKeyboardButton(text='Назначить администратором', callback_data=f'admin {idx}')
+            key_admin = types.InlineKeyboardButton(text='Назначить администратором', callback_data=f'admin {id}')
             keyboard.add(key_admin)
         if role != 'Бариста':
-            key_barista = types.InlineKeyboardButton(text='Назначить баристой', callback_data=f'barista {idx}')
+            key_barista = types.InlineKeyboardButton(text='Назначить баристой', callback_data=f'barista {id}')
             keyboard.add(key_barista)
         if role != 'Пользователь':
-            key_user = types.InlineKeyboardButton(text='Назначить пользователем', callback_data=f'user {idx}')
+            key_user = types.InlineKeyboardButton(text='Назначить пользователем', callback_data=f'user {id}')
             keyboard.add(key_user)
 
         bot.send_message(message.chat.id, f'Роль пользователя: {role}', reply_markup=keyboard)
@@ -161,6 +163,9 @@ def commands(message):
 # функция для обработки кнопок
 @bot.callback_query_handler(func=lambda call: True)
 def callback_worker(call):
+    conn = sqlite3.connect('sqlite3.db')
+    cursor = conn.cursor()
+
     callback_data = call.data.split()
 
     if callback_data[0] == 'confirm':
@@ -208,16 +213,22 @@ def callback_worker(call):
         bot.register_next_step_handler(call.message, edit_price, int(callback_data[1]))
 
     elif callback_data[0] == 'admin':
-        users_list[int(callback_data[1])]["role"] = 'Администратор'
+        query = f'update users set roleId = 1 where userId = {callback_data[1]}'
+        cursor.execute(query)
         bot.send_message(call.message.chat.id, 'Роль изменена')
+        conn.commit()
 
     elif callback_data[0] == 'barista':
-        users_list[int(callback_data[1])]["role"] = 'Бариста'
+        query = f'update users set roleId = 2 where userId = {callback_data[1]}'
+        cursor.execute(query)
         bot.send_message(call.message.chat.id, 'Роль изменена')
+        conn.commit()
 
     elif callback_data[0] == 'user':
-        users_list[int(callback_data[1])]["role"] = 'Пользователь'
+        query = f'update users set roleId = 3 where userId = {callback_data[1]}'
+        cursor.execute(query)
         bot.send_message(call.message.chat.id, 'Роль изменена')
+        conn.commit()
 
     bot.answer_callback_query(call.id)
 
