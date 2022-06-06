@@ -48,11 +48,6 @@ def convert_order_to_string(order):
 
     return order_string, order[0][-2]
 
-def change_orders_status(order_code, status):
-    for order in orders_list:
-        if order["code"] == order_code:
-            order["status"] = status
-
 def convert_status(status):
     if status == 'new':
         return 'Новый'
@@ -137,21 +132,28 @@ def order(message):
 # функция для обработки кнопок
 @bot.callback_query_handler(func=lambda call: True)
 def callback_worker(call):
+    conn = sqlite3.connect('sqlite3.db')
+    cursor = conn.cursor()
+
     callback_data = call.data.split()
 
     state = callback_data[0]
     order_code = int(callback_data[1])
 
+    state_db = state
+
     if state == "in_process":
-        change_orders_status(order_code, 'in process')
+        state_db = 'in process'
         bot.send_message(call.message.chat.id, f'Заказ /{order_code} в процессе')
 
     elif state == "waiting":
-        change_orders_status(order_code, 'waiting')
         bot.send_message(call.message.chat.id, f'Заказ /{order_code} завершен и ждет получателя')
 
     elif state == "completed":
-        change_orders_status(order_code, 'completed')
         bot.send_message(call.message.chat.id, f'Заказ /{order_code} получен')
+
+    query = f'update orders set status = "{state_db}" where id = {order_code}'
+    cursor.execute(query)
+    conn.commit()
 
 bot.polling(none_stop=True)
