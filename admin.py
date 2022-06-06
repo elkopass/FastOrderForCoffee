@@ -171,17 +171,16 @@ def callback_worker(call):
     if callback_data[0] == 'confirm':
         global name, price
 
-        item = {
-            'id': menu[-1]['id'] + 1,
-            'name': name,
-            'price': price
-        }
-        menu.append(item)
+        query = f'insert into menu (name, price) values ("{name}", {price})'
+
+        cursor.execute(query)
 
         bot.send_message(call.message.chat.id, f'{name} добавлен в меню')
 
         name = ''
         price = 0
+
+        conn.commit()
 
     elif callback_data[0] == 'cancel':
         name = ''
