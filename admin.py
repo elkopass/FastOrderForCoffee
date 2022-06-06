@@ -50,8 +50,12 @@ def edit_name(message, idx):
         bot.send_message(message.chat.id, 'Введите название корректно')
         bot.register_next_step_handler(message, edit_name, idx)
     else:
-        menu[idx]["name"] = message.text
+        conn = sqlite3.connect('sqlite3.db')
+        cursor = conn.cursor()
+        query = f'update menu set name = "{message.text}" where id = {idx}'
+        cursor.execute(query)
         bot.send_message(message.chat.id, 'Изменения сохранены')
+        conn.commit()
 
 def get_price(message):
     global price
@@ -78,8 +82,12 @@ def edit_price(message, idx):
         bot.send_message(message.chat.id, 'Введите цену корректно')
         bot.register_next_step_handler(message, edit_price, idx)
     else:
-        menu[idx]["price"] = int(message.text)
+        conn = sqlite3.connect('sqlite3.db')
+        cursor = conn.cursor()
+        query = f'update menu set price = {int(message.text)} where id = {idx}'
+        cursor.execute(query)
         bot.send_message(message.chat.id, 'Изменения сохранены')
+        conn.commit()
 
 def convert_role_id_to_string(role_id):
     if role_id == 1:
@@ -137,27 +145,24 @@ def user(message):
 def commands(message):
     id = int(message.text[1:])
 
-    idx = -1
-    this_item = None
+    conn = sqlite3.connect('sqlite3.db')
+    cursor = conn.cursor()
 
-    for i, item in enumerate(menu):
-        if item['id'] == id:
-            idx = i
-            this_item = item
-            break
+    query = f'select name, price from menu where id = {id}'
+    this_item = cursor.execute(query).fetchone()
 
-    if idx == -1:
+    if this_item == None:
         bot.send_message(message.chat.id, f'Заказ с id = {id} не найден')
     else:
         keyboard = types.InlineKeyboardMarkup()
 
-        key_edit = types.InlineKeyboardButton(text='Изменить', callback_data=f'edit {idx}')
+        key_edit = types.InlineKeyboardButton(text='Изменить', callback_data=f'edit {id}')
         keyboard.add(key_edit)
 
-        key_delete = types.InlineKeyboardButton(text='Удалить', callback_data=f'delete {idx}')
+        key_delete = types.InlineKeyboardButton(text='Удалить', callback_data=f'delete {id}')
         keyboard.add(key_delete)
 
-        this_item_string = f'Название: {this_item["name"]} | Цена: {this_item["price"]}'
+        this_item_string = f'Название: {this_item[0]} | Цена: {this_item[1]}'
         bot.send_message(message.chat.id, this_item_string, reply_markup=keyboard)
 
 # функция для обработки кнопок
@@ -188,8 +193,10 @@ def callback_worker(call):
         bot.send_message(call.message.chat.id, 'Операция отменена')
 
     elif callback_data[0] == 'delete':
-        menu.pop(int(callback_data[1]))
+        query = f'delete from menu where id = {callback_data[1]}'
+        cursor.execute(query)
         bot.send_message(call.message.chat.id, 'Элемент удален')
+        conn.commit()
 
     elif callback_data[0] == 'edit':
         idx = int(callback_data[1])
