@@ -5,14 +5,7 @@ from sqlite3 import Error
 
 bot = telebot.TeleBot('5240548361:AAEbvuwJy3-ErEJ3WeepU8zsYOUdw0u3dHw')
 
-orders_list = [
-    # {'id': 4, 'code': 73872304, 'name': 'Капучино', 'status': 'new', 'time': '14:30' },
-    # {'id': 5, 'code': 73872304, 'name': 'Эспрессо', 'status': 'new', 'time': '14:30'},
-    # {'id': 0, 'code': 89374287, 'name': 'Американо', 'status': 'completed', 'time': '14:15'},
-    # {'id': 3, 'code': 37593577, 'name': 'Капучино', 'status': 'new', 'time': '14:28'},
-    # {'id': 1, 'code': 37465027, 'name': 'Латте', 'status': 'in process', 'time': '14:20'},
-    # {'id': 2, 'code': 37465027, 'name': 'Латте', 'status': 'in process', 'time': '14:20'}
-]
+orders_list = []
 
 
 def convert_orders_list_to_string(orders_list):
@@ -42,21 +35,18 @@ def convert_orders_list_to_string(orders_list):
 
     return orders_string
 
-def convert_order_to_string(order_code):
-    # получаем список элементов заказа с соответствующим кодом
-    this_items_list = [order for order in orders_list if order["code"] == order_code]
-
+def convert_order_to_string(order):
     # если заказа с данным кодом не существует, возвращаем None
-    if len(this_items_list) == 0:
-        return None
+    if len(order) == 0:
+        return None, None
 
     # достаем список названий элементов из заказа
-    names_list = [order["name"] for order in this_items_list]
+    names_list = [order[2] for order in order]
 
-    order_string = f'Заказ: {", ".join(names_list)} | Время: {this_items_list[0]["time"]} ' \
-                   f'| Статус: {convert_status(this_items_list[0]["status"])}\n'
+    order_string = f'Заказ: {", ".join(names_list)} | Время: {order[0][-1]} ' \
+                   f'| Статус: {convert_status(order[0][-2])}\n'
 
-    return order_string, this_items_list[0]["status"]
+    return order_string, order[0][-2]
 
 def change_orders_status(order_code, status):
     for order in orders_list:
@@ -103,9 +93,23 @@ def orders(message):
 # команда для полученя заказа по его коду
 @bot.message_handler()
 def order(message):
+    conn = sqlite3.connect('sqlite3.db')
+    cursor = conn.cursor()
+
     try:
         order_code = int(message.text[1:])
-        order_string, status = convert_order_to_string(order_code)
+
+        query = f'''
+                    select orders.id, userId, name, size, status, time
+                    from orders join pos_ord
+                        on pos_ord.ord_id = {order_code} and orders.id = {order_code}
+                    join positions
+                        on pos_ord.pos_id = positions.id
+                    '''
+
+        this_order = cursor.execute(query).fetchall()
+
+        order_string, status = convert_order_to_string(this_order)
 
         if order_string == None:
             error_string = f'Заказ с кодом {order_code} не найден'
@@ -122,9 +126,9 @@ def order(message):
 
             try:
                 keyboard.add(key)
-                bot.send_message(message.chat.id, convert_order_to_string(order_code), reply_markup=keyboard)
+                bot.send_message(message.chat.id, order_string, reply_markup=keyboard)
             except:
-                bot.send_message(message.chat.id, convert_order_to_string(order_code))
+                bot.send_message(message.chat.id, order_string)
     except:
         error_string = f'Команда {message.text} не найдена. ' \
                        f'Обратитесь к /help, чтобы получить список доступных команд'
