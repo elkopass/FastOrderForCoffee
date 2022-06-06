@@ -1,5 +1,7 @@
 import telebot
 from telebot import types
+import sqlite3
+from sqlite3 import Error
 
 bot = telebot.TeleBot('5240548361:AAEbvuwJy3-ErEJ3WeepU8zsYOUdw0u3dHw')
 
@@ -85,6 +87,19 @@ def help(message):
 # команда для получения списка заказов
 @bot.message_handler(commands=['orders'])
 def orders(message):
+    conn = sqlite3.connect('sqlite3.db')
+    cursor = conn.cursor()
+
+    query = '''
+    select orders.id, userId, name, size, status, time
+    from orders join pos_ord
+        on pos_ord.ord_id = orders.id
+    join positions
+        on pos_ord.pos_id = positions.id
+    '''
+    orders_query = cursor.execute(query)
+    print(orders_query.fetchall())
+
     bot.send_message(message.chat.id, convert_orders_list_to_string(orders_list))
 
 # команда для полученя заказа по его коду
