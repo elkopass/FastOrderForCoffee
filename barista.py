@@ -1,7 +1,7 @@
 import telebot
 from telebot import types
 import sqlite3
-from sqlite3 import Error
+import emoji
 
 bot = telebot.TeleBot('5240548361:AAEbvuwJy3-ErEJ3WeepU8zsYOUdw0u3dHw')
 
@@ -46,7 +46,7 @@ def convert_order_to_string(order):
     order_string = f'Заказ: {", ".join(names_list)} | Время: {order[0][-2]} ' \
                    f'| Статус: {convert_status(order[0][-3])} | Рейтинг клиента: {order[0][-1]}\n'
 
-    return order_string, order[0][-2]
+    return order_string, order[0][-3]
 
 def convert_status(status):
     if status == 'new':
@@ -152,7 +152,20 @@ def callback_worker(call):
         bot.send_message(call.message.chat.id, f'Заказ /{order_code} завершен и ждет получателя')
 
     elif state == "completed":
-        bot.send_message(call.message.chat.id, f'Заказ /{order_code} получен')
+        keyboard = types.InlineKeyboardMarkup()
+        rate_client_5 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 5), callback_data=f'rate ')
+        rate_client_4 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 4), callback_data=f'rate')
+        rate_client_3 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 3), callback_data=f'rate')
+        rate_client_2 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 2), callback_data=f'rate')
+        rate_client_1 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 1), callback_data=f'rate')
+        keyboard.add(rate_client_5)
+        keyboard.add(rate_client_4)
+        keyboard.add(rate_client_3)
+        keyboard.add(rate_client_2)
+        keyboard.add(rate_client_1)
+
+        bot.send_message(call.message.chat.id, f'Заказ /{order_code} получен. Оцените клиента', reply_markup=keyboard)
+
 
     query = f'update orders set status = "{state_db}" where id = {order_code}'
     cursor.execute(query)
