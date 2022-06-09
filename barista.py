@@ -153,11 +153,13 @@ def callback_worker(call):
 
     elif state == "completed":
         keyboard = types.InlineKeyboardMarkup()
-        rate_client_5 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 5), callback_data=f'rate ')
-        rate_client_4 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 4), callback_data=f'rate')
-        rate_client_3 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 3), callback_data=f'rate')
-        rate_client_2 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 2), callback_data=f'rate')
-        rate_client_1 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 1), callback_data=f'rate')
+
+        rate_client_5 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 5), callback_data=f'rate {order_code} {5}')
+        rate_client_4 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 4), callback_data=f'rate {order_code} {4}')
+        rate_client_3 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 3), callback_data=f'rate {order_code} {3}')
+        rate_client_2 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 2), callback_data=f'rate {order_code} {2}')
+        rate_client_1 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 1), callback_data=f'rate {order_code} {1}')
+
         keyboard.add(rate_client_5)
         keyboard.add(rate_client_4)
         keyboard.add(rate_client_3)
@@ -166,9 +168,24 @@ def callback_worker(call):
 
         bot.send_message(call.message.chat.id, f'Заказ /{order_code} получен. Оцените клиента', reply_markup=keyboard)
 
+    elif state == 'rate':
+        bot.send_message(call.message.chat.id, f'Вы оценили заказ /{order_code} на {callback_data[2]} звезд. Спасибо!')
 
-    query = f'update orders set status = "{state_db}" where id = {order_code}'
-    cursor.execute(query)
+    if state != 'rate':
+        query = f'update orders set status = "{state_db}" where id = {order_code}'
+        cursor.execute(query)
+    else:
+        stars = int(callback_data[2])
+        query_get_user = f'select userId from orders where id = {int(order_code)}'
+        user_id = cursor.execute(query_get_user).fetchone()[0]
+
+        query_user_rating = f'select rating from users where id = {user_id}'
+        rating = cursor.execute(query_user_rating).fetchone()[0]
+
+        updated_rating = float(f"{(rating + stars) / 2:.{1}f}")
+        query = f'update users set rating = {updated_rating} where id = {user_id}'
+        cursor.execute(query)
+
     conn.commit()
 
 bot.polling(none_stop=True)
