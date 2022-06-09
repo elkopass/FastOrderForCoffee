@@ -43,8 +43,8 @@ def convert_order_to_string(order):
     # достаем список названий элементов из заказа
     names_list = [order[2] for order in order]
 
-    order_string = f'Заказ: {", ".join(names_list)} | Время: {order[0][-1]} ' \
-                   f'| Статус: {convert_status(order[0][-2])}\n'
+    order_string = f'Заказ: {", ".join(names_list)} | Время: {order[0][-2]} ' \
+                   f'| Статус: {convert_status(order[0][-3])} | Рейтинг клиента: {order[0][-1]}\n'
 
     return order_string, order[0][-2]
 
@@ -95,11 +95,13 @@ def order(message):
         order_code = int(message.text[1:])
 
         query = f'''
-                    select orders.id, userId, name, size, status, time
+                    select orders.id, users.userId, name, size, status, time, rating
                     from orders join pos_ord
                         on pos_ord.ord_id = {order_code} and orders.id = {order_code}
                     join positions
                         on pos_ord.pos_id = positions.id
+                    join users 
+                    	on users.id = orders.userId
                     '''
 
         this_order = cursor.execute(query).fetchall()
