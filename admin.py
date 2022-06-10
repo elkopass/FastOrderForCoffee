@@ -4,15 +4,9 @@ import sqlite3
 
 bot = telebot.TeleBot('5240548361:AAEbvuwJy3-ErEJ3WeepU8zsYOUdw0u3dHw')
 
-users_list = [
-    {'id': 0, 'role': 'Администратор'},
-    {'id': 1, 'role': 'Пользователь'},
-    {'id': 2, 'role': 'Бариста'}
-]
+users_list = []
 
-menu = [
-    {'id': 0, 'name': 'Капучино', 'price': 75}
-]
+menu = []
 name = ''
 price = 0
 

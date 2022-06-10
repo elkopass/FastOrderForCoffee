@@ -3,15 +3,12 @@ from telebot import types
 
 bot = telebot.TeleBot('5240548361:AAEbvuwJy3-ErEJ3WeepU8zsYOUdw0u3dHw')
 
-# команда-помощник
-@bot.message_handler(commands=['help'])
-def help(message):
-    help_string = 'Это бот для баристы, который позволит Вам работать с заказами.\n\n' \
-                  '<strong>Список команд</strong>\n' \
-                  '/orders - получить список активных заказов\n' \
-                  '/?  (? - идентификатор заказа) - получить заказ по его идентификатору'
+# стартовая команда
+@bot.message_handler(commands=['start'])
+def start(message):
+    start_string = 'Приветствую! Я бот для быстрого онлайн заказа кофе. Выберите свою роль:'
 
-    bot.send_message(message.chat.id, help_string, parse_mode='html')
+    bot.send_message(message.chat.id, start_string)
 
 
 bot.polling(none_stop=True)
