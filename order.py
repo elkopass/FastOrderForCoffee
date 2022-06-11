@@ -291,7 +291,7 @@ def bot_message(message):
 
 # функция для обработки кнопок
 @bot.callback_query_handler(func=lambda call: True)
-def cпш(call):
+def callback_worker(call):
 
     state = call.data.split()[0]
     
