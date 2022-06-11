@@ -320,15 +320,15 @@ def cпш(call):
                 ordersORM[id].remove('Kапучино')
         elif state =="size":
             keyboard = types.InlineKeyboardMarkup()
-            key1 = types.InlineKeyboardButton(text='Средний', callback_data= f"med {call.message.chat.id}")
-            key2 = types.InlineKeyboardButton(text='Большой', callback_data= f"sml {call.message.chat.id}")
+            key1 = types.InlineKeyboardButton(text='Средний 100', callback_data= f"med {call.message.chat.id}")
+            key2 = types.InlineKeyboardButton(text='Большой 120', callback_data= f"sml {call.message.chat.id}")
             
             keyboard.add(key1, key2)
             
             bot.send_message(call.message.chat.id, 'Выберите размер:', reply_markup=keyboard)
         elif state == "adding":
             keyboard = types.InlineKeyboardMarkup()
-            key1 = types.InlineKeyboardButton(text='Шоколадная крошка', callback_data= f"addings {call.message.chat.id}")
+            key1 = types.InlineKeyboardButton(text='Шоколадная крошка 15', callback_data= f"addings {call.message.chat.id}")
             keyboard.add(key1)
             bot.send_message(call.message.chat.id, 'Выберите добавку:', reply_markup=keyboard)
         elif state == "sml":
