@@ -2,8 +2,9 @@ import telebot
 from telebot import types
 import sqlite3
 import emoji
+from config import tokens
 
-bot = telebot.TeleBot('5240548361:AAEbvuwJy3-ErEJ3WeepU8zsYOUdw0u3dHw')
+bot = telebot.TeleBot(tokens['barista_token'])
 
 orders_list = []
 
@@ -154,11 +155,16 @@ def callback_worker(call):
     elif state == "completed":
         keyboard = types.InlineKeyboardMarkup()
 
-        rate_client_5 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 5), callback_data=f'rate {order_code} {5}')
-        rate_client_4 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 4), callback_data=f'rate {order_code} {4}')
-        rate_client_3 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 3), callback_data=f'rate {order_code} {3}')
-        rate_client_2 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 2), callback_data=f'rate {order_code} {2}')
-        rate_client_1 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 1), callback_data=f'rate {order_code} {1}')
+        rate_client_5 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 5),
+                                                   callback_data=f'rate {order_code} {5}')
+        rate_client_4 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 4),
+                                                   callback_data=f'rate {order_code} {4}')
+        rate_client_3 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 3),
+                                                   callback_data=f'rate {order_code} {3}')
+        rate_client_2 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 2),
+                                                   callback_data=f'rate {order_code} {2}')
+        rate_client_1 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 1),
+                                                   callback_data=f'rate {order_code} {1}')
 
         keyboard.add(rate_client_5)
         keyboard.add(rate_client_4)

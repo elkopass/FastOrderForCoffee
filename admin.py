@@ -1,8 +1,9 @@
 import telebot
 from telebot import types
 import sqlite3
+from config import tokens
 
-bot = telebot.TeleBot('5240548361:AAEbvuwJy3-ErEJ3WeepU8zsYOUdw0u3dHw')
+bot = telebot.TeleBot(tokens['admin_token'])
 
 users_list = []
 
@@ -187,8 +188,9 @@ def callback_worker(call):
         bot.send_message(call.message.chat.id, 'Операция отменена')
 
     elif callback_data[0] == 'delete':
-        query = f'delete from menu where id = {callback_data[1]}'
+        query = f'delete from menu where id = {int(callback_data[1])}'
         cursor.execute(query)
+
         bot.send_message(call.message.chat.id, 'Элемент удален')
         conn.commit()
 
