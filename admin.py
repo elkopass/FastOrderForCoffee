@@ -4,30 +4,27 @@ import sqlite3
 from config import tokens
 
 bot = telebot.TeleBot(tokens['admin_token'])
-
 users_list = []
 
 menu = []
 name = ''
 price = 0
 
-# команда-помощник
-@bot.message_handler(commands=['help'])
-def help(message):
-    help_string = 'Это бот для администратора, который позволит Вам работать с системой.\n\n' \
-                  '<strong>Список команд</strong>\n' \
-                  '/add - добавить элемент в меню\n' \
-                  '/?  (? - id элемента) - получить элемент меню по его идентификатору\n' \
-                  '/users - получить список пользователей\n' \
-                  '/user ? (? - id пользователя) - получить пользователя по его идентификатору'
 
-    bot.send_message(message.chat.id, help_string, parse_mode='html')
+def check_if_admin(message):
+    conn = sqlite3.connect('sqlite3.db')
+    cursor = conn.cursor()
 
-# команда для добавления элемента в меню
-@bot.message_handler(commands=['add'])
-def add(message):
-    bot.send_message(message.chat.id, 'Введите название')
-    bot.register_next_step_handler(message, get_name)
+    user_id = message.from_user.id
+    query = f'select roleId from users where userId = {user_id}'
+    role_id = int(cursor.execute(query).fetchone()[0])
+
+    if role_id == None or role_id != 1:
+        error_message = 'Отказано в доступе! Вы не являетесь администратором.'
+        bot.send_message(message.chat.id, error_message)
+        return False
+    else:
+        return True
 
 def get_name(message):
     global name
@@ -92,8 +89,36 @@ def convert_role_id_to_string(role_id):
     elif role_id == 3:
         return 'Пользователь'
 
+
+# команда-помощник
+@bot.message_handler(commands=['help'])
+def help(message):
+    if not check_if_admin(message):
+        return
+
+    help_string = 'Это бот для администратора, который позволит Вам работать с системой.\n\n' \
+                  '<strong>Список команд</strong>\n' \
+                  '/add - добавить элемент в меню\n' \
+                  '/?  (? - id элемента) - получить элемент меню по его идентификатору\n' \
+                  '/users - получить список пользователей\n' \
+                  '/user ? (? - id пользователя) - получить пользователя по его идентификатору'
+
+    bot.send_message(message.chat.id, help_string, parse_mode='html')
+
+# команда для добавления элемента в меню
+@bot.message_handler(commands=['add'])
+def add(message):
+    if not check_if_admin(message):
+        return
+
+    bot.send_message(message.chat.id, 'Введите название')
+    bot.register_next_step_handler(message, get_name)
+
 @bot.message_handler(commands=['users'])
 def users(message):
+    if not check_if_admin(message):
+        return
+
     conn = sqlite3.connect('sqlite3.db')
     cursor = conn.cursor()
 
@@ -108,6 +133,9 @@ def users(message):
 
 @bot.message_handler(commands=['user'])
 def user(message):
+    if not check_if_admin(message):
+        return
+
     conn = sqlite3.connect('sqlite3.db')
     cursor = conn.cursor()
 
@@ -138,6 +166,9 @@ def user(message):
 
 @bot.message_handler()
 def commands(message):
+    if not check_if_admin(message):
+        return
+
     id = int(message.text[1:])
 
     conn = sqlite3.connect('sqlite3.db')
