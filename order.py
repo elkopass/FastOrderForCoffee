@@ -183,7 +183,23 @@ def help(message):
 
     bot.send_message(message.chat.id, help_string, parse_mode='html')
 
+ordersOR = dict() 
+ordersOR[id].add([1,2,3]) #заказ пользователя, где цифра - отдельная позиция 
+parame = dict()
+parame[id].add([])
 
+def fiPr(id):
+    for i in range(pos):
+        parame[id].append({'Size': 0,'Addings': []}) #Добавки пользователю
+
+for i in ordersOR[id]:
+    finalprice = 0
+    if i =='Капучино':
+        finalprice += 75
+    if parame[id][i]['Size'] == 1:
+        finalprice += 50
+    if  parame[id][i]['Addings'] == "Suagr":
+        finalprice += 15
 
 @bot.message_handler(content_types=['text'])
 def bot_message(message):
