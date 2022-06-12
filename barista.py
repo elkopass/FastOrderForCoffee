@@ -5,9 +5,22 @@ import emoji
 from config import tokens
 
 bot = telebot.TeleBot(tokens['barista_token'])
-
 orders_list = []
 
+def check_if_barista(message):
+    conn = sqlite3.connect('sqlite3.db')
+    cursor = conn.cursor()
+
+    user_id = message.from_user.id
+    query = f'select roleId from users where userId = {user_id}'
+    role_id = int(cursor.execute(query).fetchone()[0])
+
+    if role_id == None or role_id > 2:
+        error_message = 'Отказано в доступе! Вы не являетесь баристой.'
+        bot.send_message(message.chat.id, error_message)
+        return False
+    else:
+        return True
 
 def convert_orders_list_to_string(orders_list):
     orders_string = ''
@@ -63,6 +76,9 @@ def convert_status(status):
 # команда-помощник
 @bot.message_handler(commands=['help'])
 def help(message):
+    if not check_if_barista(message):
+        return
+
     help_string = 'Это бот для баристы, который позволит Вам работать с заказами.\n\n' \
                   '<strong>Список команд</strong>\n' \
                   '/orders - получить список активных заказов\n' \
@@ -73,6 +89,9 @@ def help(message):
 # команда для получения списка заказов
 @bot.message_handler(commands=['orders'])
 def orders(message):
+    if not check_if_barista(message):
+        return
+
     conn = sqlite3.connect('sqlite3.db')
     cursor = conn.cursor()
 
@@ -84,11 +103,19 @@ def orders(message):
         on pos_ord.pos_id = positions.id
     '''
     orders_list = cursor.execute(query).fetchall()
-    bot.send_message(message.chat.id, convert_orders_list_to_string(orders_list))
+    orders_list_string = convert_orders_list_to_string(orders_list)
+
+    if orders_list_string != '':
+        bot.send_message(message.chat.id, orders_list_string)
+    else:
+        bot.send_message(message.chat.id, 'Нет активных заказов')
 
 # команда для полученя заказа по его коду
 @bot.message_handler()
 def order(message):
+    if not check_if_barista(message):
+        return
+
     conn = sqlite3.connect('sqlite3.db')
     cursor = conn.cursor()
 
