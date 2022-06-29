@@ -4,10 +4,16 @@ import sqlite3
 import emoji
 from config import tokens
 from barista_helper import check_if_barista
+<<<<<<< HEAD
+=======
+from barista_helper import convert_orders_list_to_string
+from barista_helper import convert_order_to_string
+>>>>>>> origin/dev
 
 bot = telebot.TeleBot(tokens['barista_token'])
 orders_list = []
 
+<<<<<<< HEAD
 
 def convert_orders_list_to_string(orders_list):
     orders_string = ''
@@ -60,8 +66,10 @@ def convert_status(status):
         return 'Завершен'
 
 
+=======
+>>>>>>> origin/dev
 # команда-помощник
-@bot.message_handler(commands=['help'])
+@bot.message_handler(commands=['start', 'help'])
 def help(message):
     if not check_if_barista(bot, message):
         return
@@ -82,14 +90,30 @@ def orders(message):
     conn = sqlite3.connect('sqlite3.db')
     cursor = conn.cursor()
 
-    query = '''
-    select orders.id, userId, name, size, status, time
-    from orders join pos_ord
-        on pos_ord.ord_id = orders.id
-    join positions
-        on pos_ord.pos_id = positions.id
+    # Ниже запросы, за которые меня убил бы Бабанов
+    query_not_addition = '''
+    select D.id, D.userId, D.pos_id, D.status, D.time, D.code, D.size, D.name, D.add_id  as 'add_name', D.price from 
+	(select * from orders 
+	join pos_ord on orders.id = pos_ord.ord_id
+	join positions on pos_ord.pos_id = positions.id
+	join drink_add on pos_ord.pos_id = drink_add.pos_id
+	join menu on drink_id = menu.id) as D
+	where D.add_id is null
     '''
-    orders_list = cursor.execute(query).fetchall()
+
+    query_addition = '''
+    select D.id, D.userId, D.pos_id, D.status, D.time, D.code, D.size, D.name, menu.name as 'add_name', D.price from 
+	(select * from orders 
+	join pos_ord on orders.id = pos_ord.ord_id
+	join positions on pos_ord.pos_id = positions.id
+	join drink_add on pos_ord.pos_id = drink_add.pos_id
+	join menu on drink_id = menu.id) as D
+	join menu on add_id = menu.id
+    '''
+
+    orders_list = cursor.execute(query_not_addition).fetchall()
+    orders_list.extend(cursor.execute(query_addition).fetchall())
+
     orders_list_string = convert_orders_list_to_string(orders_list)
 
     if orders_list_string != '':
@@ -109,17 +133,30 @@ def order(message):
     try:
         order_code = int(message.text[1:])
 
-        query = f'''
-                    select orders.id, users.userId, name, size, status, time, rating
-                    from orders join pos_ord
-                        on pos_ord.ord_id = {order_code} and orders.id = {order_code}
-                    join positions
-                        on pos_ord.pos_id = positions.id
-                    join users 
-                    	on users.id = orders.userId
-                    '''
+        query_not_addition = f'''
+        select D.id, D.userId, D.pos_id, D.status, D.time, D.code, D.size, D.name, D.add_id as 'add_name', D.price, D.add_id as 'add_price', D.rating from 
+	    (select * from orders 
+	    join pos_ord on orders.id = pos_ord.ord_id
+	    join positions on pos_ord.pos_id = positions.id
+	    join drink_add on pos_ord.pos_id = drink_add.pos_id
+	    join menu on drink_id = menu.id
+	    join users on orders.userId = users.id) as D
+	    where D.add_id is null and D.code = {order_code}
+        '''
 
-        this_order = cursor.execute(query).fetchall()
+        query_addition = f'''
+        select D.id, D.userId, D.pos_id, D.status, D.time, D.code, D.size, D.name, menu.name as 'add_name', D.price, menu.price as 'add_price', D.rating from 
+	    (select * from orders 
+	    join pos_ord on orders.id = pos_ord.ord_id
+	    join positions on pos_ord.pos_id = positions.id
+	    join drink_add on pos_ord.pos_id = drink_add.pos_id
+	    join menu on drink_id = menu.id
+	    join users on orders.userId = users.id) as D
+	    join menu on add_id = menu.id and D.code = {order_code}
+        '''
+
+        this_order = cursor.execute(query_not_addition).fetchall()
+        this_order.extend(cursor.execute(query_addition).fetchall())
 
         order_string, status = convert_order_to_string(this_order)
 
@@ -129,11 +166,11 @@ def order(message):
         else:
             keyboard = types.InlineKeyboardMarkup()
 
-            if status == 'new':
+            if status == 0:
                 key = types.InlineKeyboardButton(text='В процессе', callback_data=f'in_process {order_code}')
-            elif status == 'in process':
+            elif status == 1:
                 key = types.InlineKeyboardButton(text='Ожидание', callback_data=f'waiting {order_code}')
-            elif status == 'waiting':
+            elif status == 2:
                 key = types.InlineKeyboardButton(text='Завершен', callback_data=f'completed {order_code}')
 
             try:
@@ -160,13 +197,15 @@ def callback_worker(call):
     state_db = state
 
     if state == "in_process":
-        state_db = 'in process'
+        state_db = 1
         bot.send_message(call.message.chat.id, f'Заказ /{order_code} в процессе')
 
     elif state == "waiting":
+        state_db = 2
         bot.send_message(call.message.chat.id, f'Заказ /{order_code} завершен и ждет получателя')
 
     elif state == "completed":
+        state_db = 3
         keyboard = types.InlineKeyboardMarkup()
 
         rate_client_5 = types.InlineKeyboardButton(text=emoji.emojize(':star:' * 5),
@@ -192,20 +231,21 @@ def callback_worker(call):
         bot.send_message(call.message.chat.id, f'Вы оценили заказ /{order_code} на {callback_data[2]} звезд. Спасибо!')
 
     if state != 'rate':
-        query = f'update orders set status = "{state_db}" where id = {order_code}'
+        query = f'update orders set status = {state_db} where code = {order_code}'
         cursor.execute(query)
     else:
         stars = int(callback_data[2])
-        query_get_user = f'select userId from orders where id = {int(order_code)}'
+        query_get_user = f'select userId from orders where code = {int(order_code)}'
         user_id = cursor.execute(query_get_user).fetchone()[0]
-
         query_user_rating = f'select rating from users where id = {user_id}'
         rating = cursor.execute(query_user_rating).fetchone()[0]
 
         updated_rating = float(f"{(rating + stars) / 2:.{1}f}")
         query = f'update users set rating = {updated_rating} where id = {user_id}'
+
         cursor.execute(query)
 
+    bot.answer_callback_query(call.id)
     conn.commit()
 
 bot.polling(none_stop=True)

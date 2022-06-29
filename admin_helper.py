@@ -14,4 +14,22 @@ def check_if_admin(bot, message):
         bot.send_message(message.chat.id, error_message)
         return False
     else:
+<<<<<<< HEAD
         return True
+=======
+        return True
+
+def convert_role_id_to_string(role_id):
+    if role_id == 1:
+        return 'Администратор'
+    elif role_id == 2:
+        return 'Бариста'
+    elif role_id == 3:
+        return 'Пользователь'
+
+def convert_type_id_to_string(type_id):
+    if type_id == 0:
+        return 'Напиток'
+    else:
+        return 'Добавка'
+>>>>>>> origin/dev
