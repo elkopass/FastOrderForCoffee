@@ -2,6 +2,7 @@ import telebot
 from telebot import types
 import sqlite3
 from config import tokens
+from admin_helper import check_if_admin
 
 bot = telebot.TeleBot(tokens['admin_token'])
 users_list = []
@@ -9,22 +10,6 @@ users_list = []
 menu = []
 name = ''
 price = 0
-
-
-def check_if_admin(message):
-    conn = sqlite3.connect('sqlite3.db')
-    cursor = conn.cursor()
-
-    user_id = message.from_user.id
-    query = f'select roleId from users where userId = {user_id}'
-    role_id = int(cursor.execute(query).fetchone()[0])
-
-    if role_id == None or role_id != 1:
-        error_message = 'Отказано в доступе! Вы не являетесь администратором.'
-        bot.send_message(message.chat.id, error_message)
-        return False
-    else:
-        return True
 
 def get_name(message):
     global name
@@ -93,7 +78,7 @@ def convert_role_id_to_string(role_id):
 # команда-помощник
 @bot.message_handler(commands=['help'])
 def help(message):
-    if not check_if_admin(message):
+    if not check_if_admin(bot, message):
         return
 
     help_string = 'Это бот для администратора, который позволит Вам работать с системой.\n\n' \
@@ -108,7 +93,7 @@ def help(message):
 # команда для добавления элемента в меню
 @bot.message_handler(commands=['add'])
 def add(message):
-    if not check_if_admin(message):
+    if not check_if_admin(bot, message):
         return
 
     bot.send_message(message.chat.id, 'Введите название')
@@ -116,7 +101,7 @@ def add(message):
 
 @bot.message_handler(commands=['users'])
 def users(message):
-    if not check_if_admin(message):
+    if not check_if_admin(bot, message):
         return
 
     conn = sqlite3.connect('sqlite3.db')
@@ -133,7 +118,7 @@ def users(message):
 
 @bot.message_handler(commands=['user'])
 def user(message):
-    if not check_if_admin(message):
+    if not check_if_admin(bot, message):
         return
 
     conn = sqlite3.connect('sqlite3.db')
@@ -166,7 +151,7 @@ def user(message):
 
 @bot.message_handler()
 def commands(message):
-    if not check_if_admin(message):
+    if not check_if_admin(bot, message):
         return
 
     id = int(message.text[1:])
