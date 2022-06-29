@@ -4,6 +4,7 @@ import sqlite3
 from config import tokens
 from admin_helper import check_if_admin
 from admin_helper import convert_role_id_to_string
+from admin_helper import convert_type_id_to_string
 
 bot = telebot.TeleBot(tokens['admin_token'])
 users_list = []
@@ -81,12 +82,35 @@ def help(message):
 
     help_string = 'Это бот для администратора, который позволит Вам работать с системой.\n\n' \
                   '<strong>Список команд</strong>\n' \
+                  '/menu - получить список всех элементов меню\n' \
                   '/add - добавить элемент в меню\n' \
                   '/?  (? - id элемента) - получить элемент меню по его идентификатору\n' \
                   '/users - получить список пользователей\n' \
                   '/user ? (? - id пользователя) - получить пользователя по его идентификатору'
 
     bot.send_message(message.chat.id, help_string, parse_mode='html')
+
+# команда для получения всех элементов меню
+@bot.message_handler(commands=['menu'])
+def menu(message):
+    if not check_if_admin(bot, message):
+        return
+
+    conn = sqlite3.connect('sqlite3.db')
+    cursor = conn.cursor()
+
+    query = 'select * from menu'
+    menu = cursor.execute(query).fetchall()
+    menu_string = ''
+
+    for item in menu:
+        menu_string += f'/{item[0]} | Категория: {convert_type_id_to_string(item[-1])} ' \
+                       f'| Название: {item[1]} | Цена: {item[2]} руб.\n'
+
+    if menu_string == '':
+        menu_string = 'В меню нет элементов'
+
+    bot.send_message(message.chat.id, menu_string)
 
 # команда для добавления элемента в меню
 @bot.message_handler(commands=['add'])

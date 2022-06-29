@@ -23,3 +23,9 @@ def convert_role_id_to_string(role_id):
         return 'Бариста'
     elif role_id == 3:
         return 'Пользователь'
+
+def convert_type_id_to_string(type_id):
+    if type_id == 0:
+        return 'Напиток'
+    else:
+        return 'Добавка'
