@@ -3,11 +3,8 @@ from telebot import types
 import sqlite3
 from config import tokens
 from admin_helper import check_if_admin
-<<<<<<< HEAD
-=======
 from admin_helper import convert_role_id_to_string
 from admin_helper import convert_type_id_to_string
->>>>>>> origin/dev
 
 bot = telebot.TeleBot(tokens['admin_token'])
 users_list = []
@@ -15,10 +12,7 @@ users_list = []
 menu = []
 name = ''
 price = 0
-<<<<<<< HEAD
-=======
 type = 0
->>>>>>> origin/dev
 
 def get_name(message):
     global name

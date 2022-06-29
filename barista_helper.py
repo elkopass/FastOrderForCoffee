@@ -14,9 +14,6 @@ def check_if_barista(bot, message):
         bot.send_message(message.chat.id, error_message)
         return False
     else:
-<<<<<<< HEAD
-        return True
-=======
         return True
 
 def convert_orders_list_to_string(orders_list):
@@ -102,4 +99,3 @@ def convert_size(size):
         return 'Средний'
     else:
         return 'Большой'
->>>>>>> origin/dev
