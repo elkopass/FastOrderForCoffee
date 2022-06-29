@@ -15,3 +15,11 @@ def check_if_admin(bot, message):
         return False
     else:
         return True
+
+def convert_role_id_to_string(role_id):
+    if role_id == 1:
+        return 'Администратор'
+    elif role_id == 2:
+        return 'Бариста'
+    elif role_id == 3:
+        return 'Пользователь'

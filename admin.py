@@ -3,6 +3,7 @@ from telebot import types
 import sqlite3
 from config import tokens
 from admin_helper import check_if_admin
+from admin_helper import convert_role_id_to_string
 
 bot = telebot.TeleBot(tokens['admin_token'])
 users_list = []
@@ -66,17 +67,9 @@ def edit_price(message, idx):
         bot.send_message(message.chat.id, 'Изменения сохранены')
         conn.commit()
 
-def convert_role_id_to_string(role_id):
-    if role_id == 1:
-        return 'Администратор'
-    elif role_id == 2:
-        return 'Бариста'
-    elif role_id == 3:
-        return 'Пользователь'
-
 
 # команда-помощник
-@bot.message_handler(commands=['help'])
+@bot.message_handler(commands=['start', 'help'])
 def help(message):
     if not check_if_admin(bot, message):
         return
