@@ -10,9 +10,7 @@ from sqlite3 import Error
 from sqlalchemy import MetaData, Table, String, Integer, Column, Text, DateTime, Boolean, ForeignKey
 from datetime import datetime
 from sqlalchemy import insert, select
-from sqlalchemy import  create_engine
-
-ordersORM = dict()
+from sqlalchemy import  create_engin
 
 engine = create_engine('sqlite:///sqlite3.db')
 
@@ -20,7 +18,7 @@ engine.connect()
 
 print(engine)
 param = {'Size': 0,'Addings': []}
-
+ordersORM = dict()
 metadata = MetaData()
 users = Table('users', metadata, 
     Column('id', Integer(), primary_key=True),
@@ -125,7 +123,7 @@ def sendOrder(Order):
 # старт бота
 @bot.message_handler(commands=['start'])
 def start(message):
-    help_string = 'бот запущен'
+    help_string = 'Сделайте свой заказ'
 
     s = select([users]).where(
     users.c.userId == message.chat.id
@@ -183,23 +181,23 @@ def help(message):
 
     bot.send_message(message.chat.id, help_string, parse_mode='html')
 
-ordersOR = dict() 
-ordersOR[id].add([1,2,3]) #заказ пользователя, где цифра - отдельная позиция 
-parame = dict()
-parame[id].add([])
+# ordersOR = dict() 
+# ordersOR[id].add([1,2,3]) #заказ пользователя, где цифра - отдельная позиция 
+# parame = dict()
+# parame[id].add([])
 
-def fiPr(id):
-    for i in range(pos):
-        parame[id].append({'Size': 0,'Addings': []}) #Добавки пользователю
+# def fiPr(id):
+#     for i in range(pos):
+#         parame[id].append({'Size': 0,'Addings': []}) #Добавки пользователю
 
-for i in ordersOR[id]:
-    finalprice = 0
-    if i =='Капучино':
-        finalprice += 75
-    if parame[id][i]['Size'] == 1:
-        finalprice += 50
-    if  parame[id][i]['Addings'] == "Suagr":
-        finalprice += 15
+# for i in ordersOR[id]:
+#     finalprice = 0
+#     if i =='Капучино':
+#         finalprice += 75
+#     if parame[id][i]['Size'] == 1:
+#         finalprice += 50
+#     if  parame[id][i]['Addings'] == "Suagr":
+#         finalprice += 15
 
 @bot.message_handler(content_types=['text'])
 def bot_message(message):
