@@ -11,6 +11,7 @@ users_list = []
 menu = []
 name = ''
 price = 0
+type = 0
 
 def get_name(message):
     global name
@@ -36,7 +37,7 @@ def edit_name(message, idx):
         conn.commit()
 
 def get_price(message):
-    global price
+    global price, type
 
     if int(message.text) < 2 or int(message.text) >= 10000:
         bot.send_message(message.chat.id, 'Введите цену корректно')
@@ -52,7 +53,11 @@ def get_price(message):
         key_no = types.InlineKeyboardButton(text='Отменить', callback_data='cancel')
         keyboard.add(key_no)
 
-        item_string = f'Название: {name}\nЦена: {price}рублей\n\nВсе правильно?'
+        type_text = 'Напиток'
+        if type == 1:
+            type_text = 'Добавка'
+
+        item_string = f'Тип: {type_text}\nНазвание: {name}\nЦена: {price} руб.\n\nВсе правильно?'
         bot.send_message(message.chat.id, item_string, reply_markup=keyboard)
 
 def edit_price(message, idx):
@@ -89,8 +94,15 @@ def add(message):
     if not check_if_admin(bot, message):
         return
 
-    bot.send_message(message.chat.id, 'Введите название')
-    bot.register_next_step_handler(message, get_name)
+    keyboard = types.InlineKeyboardMarkup()
+
+    key_drink = types.InlineKeyboardButton(text='Напиток', callback_data=f'type {0}')
+    keyboard.add(key_drink)
+
+    key_add = types.InlineKeyboardButton(text='Добавка', callback_data=f'type {1}')
+    keyboard.add(key_add)
+
+    bot.send_message(message.chat.id, 'Выберите категорию', reply_markup=keyboard)
 
 @bot.message_handler(commands=['users'])
 def users(message):
@@ -117,14 +129,17 @@ def user(message):
     conn = sqlite3.connect('sqlite3.db')
     cursor = conn.cursor()
 
-    id = int(message.text.split()[1])
+    try:
+        id = int(message.text.split()[1])
+    except:
+        bot.send_message(message.chat.id, 'Введите id пользователя')
+        return
 
     query = f'select userId, roleId from users where userId = {id}'
-
     this_user = cursor.execute(query).fetchone()
 
     if this_user == None:
-        bot.send_message(message.chat.id, f'Пользователь с id = {id} не найден')
+        bot.send_message(message.chat.id, f'Пользователь с id {id} не найден')
     else:
         role = convert_role_id_to_string(int(this_user[1]))
 
@@ -147,40 +162,49 @@ def commands(message):
     if not check_if_admin(bot, message):
         return
 
-    id = int(message.text[1:])
+    try:
+        id = int(message.text[1:])
 
-    conn = sqlite3.connect('sqlite3.db')
-    cursor = conn.cursor()
+        conn = sqlite3.connect('sqlite3.db')
+        cursor = conn.cursor()
 
-    query = f'select name, price from menu where id = {id}'
-    this_item = cursor.execute(query).fetchone()
+        query = f'select name, price from menu where id = {id}'
+        this_item = cursor.execute(query).fetchone()
 
-    if this_item == None:
-        bot.send_message(message.chat.id, f'Заказ с id = {id} не найден')
-    else:
-        keyboard = types.InlineKeyboardMarkup()
+        if this_item == None:
+            bot.send_message(message.chat.id, f'Заказ с id = {id} не найден')
+        else:
+            keyboard = types.InlineKeyboardMarkup()
 
-        key_edit = types.InlineKeyboardButton(text='Изменить', callback_data=f'edit {id}')
-        keyboard.add(key_edit)
+            key_edit = types.InlineKeyboardButton(text='Изменить', callback_data=f'edit {id}')
+            keyboard.add(key_edit)
 
-        key_delete = types.InlineKeyboardButton(text='Удалить', callback_data=f'delete {id}')
-        keyboard.add(key_delete)
+            key_delete = types.InlineKeyboardButton(text='Удалить', callback_data=f'delete {id}')
+            keyboard.add(key_delete)
 
-        this_item_string = f'Название: {this_item[0]} | Цена: {this_item[1]}'
-        bot.send_message(message.chat.id, this_item_string, reply_markup=keyboard)
+            this_item_string = f'Название: {this_item[0]} | Цена: {this_item[1]}'
+            bot.send_message(message.chat.id, this_item_string, reply_markup=keyboard)
+    except:
+        error_string = f'Команда {message.text} не найдена. ' \
+                       f'Обратитесь к /help, чтобы получить список доступных команд'
+        bot.send_message(message.chat.id, error_string)
 
 # функция для обработки кнопок
 @bot.callback_query_handler(func=lambda call: True)
 def callback_worker(call):
+    global name, price, type
     conn = sqlite3.connect('sqlite3.db')
     cursor = conn.cursor()
 
     callback_data = call.data.split()
 
-    if callback_data[0] == 'confirm':
-        global name, price
+    if callback_data[0] == 'type':
+        type = int(callback_data[1])
+        bot.send_message(call.message.chat.id, 'Введите название')
+        bot.register_next_step_handler(call.message, get_name)
 
-        query = f'insert into menu (name, price) values ("{name}", {price})'
+    elif callback_data[0] == 'confirm':
+        query = f'insert into menu (name, price, type) values ("{name}", {price}, {type})'
 
         cursor.execute(query)
 
@@ -194,6 +218,7 @@ def callback_worker(call):
     elif callback_data[0] == 'cancel':
         name = ''
         price = 0
+        type = 0
         bot.send_message(call.message.chat.id, 'Операция отменена')
 
     elif callback_data[0] == 'delete':
