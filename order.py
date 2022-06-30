@@ -7,18 +7,15 @@ from telebot import types
 from datetime import datetime
 import sqlite3
 from sqlite3 import Error
-from sqlalchemy import MetaData, Table, String, Integer, Column, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy import MetaData, Table, String, Integer, Column, Text, DateTime, Boolean, ForeignKey, null
 from datetime import datetime
 from sqlalchemy import insert, select
-from sqlalchemy import  create_engin
+from sqlalchemy import  create_engine
 
 engine = create_engine('sqlite:///sqlite3.db')
 
 engine.connect()
 
-print(engine)
-param = {'Size': 0,'Addings': []}
-ordersORM = dict()
 metadata = MetaData()
 users = Table('users', metadata, 
     Column('id', Integer(), primary_key=True),
@@ -99,32 +96,19 @@ def createDB():
 
 
 bot = telebot.TeleBot('5240548361:AAEbvuwJy3-ErEJ3WeepU8zsYOUdw0u3dHw')
-class Order:
-    def __init__(self, id, code, arrayOfPositions , status, time): 
-        self.id = id 
-        self.code = code
-        self.arrayOfPositions = arrayOfPositions
-        self.status = status
-        self.time = time
- 
-    def display(self): 
-        print("ID: %d nName: %s" % (self.id, self.code)) 
-
-    def setPosition(self, position):
-        self.arrayOfPositions.append(position)
 
 
-# order = Order(2, 5,[] ,"new" , "00:00")
-# order.display()
-def sendOrder(Order):
-    ## send order
-    print("Order is send") 
+
+currentOrder = dict()
+addings = dict()
 
 # старт бота
 @bot.message_handler(commands=['start'])
 def start(message):
-    help_string = 'Сделайте свой заказ'
-
+    print(type(message.chat.id))
+    currentOrder[str(message.chat.id)] = []
+    addings[str(message.chat.id)] = []
+    addings[str(message.chat.id)] = []
     s = select([users]).where(
     users.c.userId == message.chat.id
     )
@@ -140,16 +124,27 @@ def start(message):
         print(r.inserted_primary_key)
     
     markup = types.ReplyKeyboardMarkup(resize_keyboard= True)
-    item1 = types.KeyboardButton("Посмотреть меню")
-    item2 = types.KeyboardButton("Сделать заказ")
-    markup.add(item1, item2)
-    bot.send_message(message.chat.id, help_string, parse_mode='html', reply_markup= markup)
+    item = types.KeyboardButton("Посмотреть заказ")
+    item1 = types.KeyboardButton("Оформить заказ")
+    markup.add(item)
+    markup.add(item1)
+    bot.send_message(message.chat.id, "Выберите позиции из меню", parse_mode='html', reply_markup= markup)
+    conn = sqlite3.connect('sqlite3.db')
+    cursor = conn.cursor()
 
-# алгоритм для подсчета времени ожидания
-@bot.message_handler(commands=['order'])
-def start(message):
-    msg = bot.send_message(message.chat.id, 'Через сколько минут вы придете за кофе')
-    bot.register_next_step_handler(msg, start_2)
+    query = 'select * from menu where type=0'
+    menu = cursor.execute(query).fetchall()
+
+    keyboard = types.InlineKeyboardMarkup()
+
+    for i in menu:
+        
+        key = types.InlineKeyboardButton(text=f"{i[1]} {i[2]}", callback_data= f"add {i[1]} {i[2]} {message.chat.id}")
+        keyboard.add(key)
+
+    bot.send_message(message.chat.id, 'Меню: ', reply_markup=keyboard)
+
+
 
 
 timeVector = [0 for i in range(1440)]
@@ -167,9 +162,46 @@ def start_2(message):
     timeOfWait = (i + 1) - (current_datetime.hour*60 + current_datetime.minute)
     help_string = f'Ваш заказ будет готов через: {timeOfWait} минут'
     bot.send_message(message.chat.id, help_string, parse_mode='html')
- 
-    print(timeVector[899:950])
+    
+    print(currentOrder[str(message.chat.id)])
+    
+    #добавляем в БД заказ
 
+    conn = sqlite3.connect('sqlite3.db')
+    cursor = conn.cursor()
+    query = f"select id from users where userId = {message.chat.id}"
+    print(query)
+    idBD = cursor.execute(query).fetchone()[0]
+    print(idBD)
+    query = f"insert into orders (userId, status, time) values ({idBD},0,{timeOfWait})"
+    print(query)
+    cursor.execute(query)
+    
+    curOrderId = cursor.lastrowid
+    for i in (currentOrder[str(message.chat.id)]):
+        cursor.execute("insert into positions (size) values (1)")
+        positionsId = cursor.lastrowid
+        query = f"insert into pos_ord (pos_id, ord_id) values ({positionsId},{curOrderId})"
+        cursor.execute(query)
+        menuId = cursor.execute(f"select id from menu where name = '{i[0]}'").fetchone()[0] 
+        print(i[0], i[1], i[2])
+        print(type(i[2]))
+        print(type(list(i[2])))
+        for j in i[2]:
+            print(j)
+            if i[2] == []:
+                query = f"insert into drink_add (drink_id, pos_id) values ({menuId},{positionsId})"
+                cursor.execute(query)
+            else:    
+                addId = cursor.execute(f"select id from menu where name = '{j[0]}'").fetchone()[0] 
+                query = f"insert into drink_add (drink_id, add_id, pos_id) values ({menuId}, {addId}, {positionsId})"
+                cursor.execute(query)
+
+    #сохранение изменений в бд
+    conn.commit()
+    
+    
+   
 
 # команда-помощник
 @bot.message_handler(commands=['help'])
@@ -181,125 +213,25 @@ def help(message):
 
     bot.send_message(message.chat.id, help_string, parse_mode='html')
 
-# ordersOR = dict() 
-# ordersOR[id].add([1,2,3]) #заказ пользователя, где цифра - отдельная позиция 
-# parame = dict()
-# parame[id].add([])
 
-# def fiPr(id):
-#     for i in range(pos):
-#         parame[id].append({'Size': 0,'Addings': []}) #Добавки пользователю
-
-# for i in ordersOR[id]:
-#     finalprice = 0
-#     if i =='Капучино':
-#         finalprice += 75
-#     if parame[id][i]['Size'] == 1:
-#         finalprice += 50
-#     if  parame[id][i]['Addings'] == "Suagr":
-#         finalprice += 15
 
 @bot.message_handler(content_types=['text'])
 def bot_message(message):
     if message.chat.type == 'private':
-        if message.text == 'Кофе':
-            markup = types.ReplyKeyboardMarkup(resize_keyboard= True)
-            item1 = types.KeyboardButton("Капучино")
-            item2 = types.KeyboardButton("Экспрессо")
-            back = types.KeyboardButton("Назад")
 
-            markup.add(item1, item2, back)
-
-            bot.send_message(message.chat.id, 'Кофе', reply_markup= markup)
-
-        elif message.text == 'Капучино':
-            markup = types.ReplyKeyboardMarkup(resize_keyboard= True)
-            item1 = types.KeyboardButton("Банановый коктейль")
-            back = types.KeyboardButton("Назад")
-
-            markup.add(item1, back)
-
-            bot.send_message(message.chat.id, 'Капучино', reply_markup= markup)
-        
-        elif message.text == 'Экспрессо':
-            markup = types.ReplyKeyboardMarkup(resize_keyboard= True)
-            item1 = types.KeyboardButton("Банановый коктейль")
-            back = types.KeyboardButton("Назад")
-
-            markup.add(item1, back)
-
-            bot.send_message(message.chat.id, 'Экспрессо', reply_markup= markup)
-        
-    
-
-
-        elif message.text == 'Холодные напитки':
-            markup = types.ReplyKeyboardMarkup(resize_keyboard= True)
-            item1 = types.KeyboardButton("Банановый коктейль")
-            back = types.KeyboardButton("Назад")
-
-            markup.add(item1, back)
-
-            bot.send_message(message.chat.id, 'Холодные напитки', reply_markup= markup)
-        elif message.text == 'Закуски':
-            markup = types.ReplyKeyboardMarkup(resize_keyboard= True)
-            item1 = types.KeyboardButton("Сэндвич")
-            item2 = types.KeyboardButton("Круасан")
-            back = types.KeyboardButton("Назад")
-
-            markup.add(item1, item2, back)
-
-            bot.send_message(message.chat.id, 'Закуски', reply_markup= markup)
-
-        elif message.text == 'Назад':
-            markup = types.ReplyKeyboardMarkup(resize_keyboard= True)
-            item1 = types.KeyboardButton("Кофе")
-            item2 = types.KeyboardButton("Холодные напитки")
-            item3 = types.KeyboardButton("Закуски")
-
-            markup.add(item1, item2, item3)
-
-            bot.send_message(message.chat.id, 'Назад', reply_markup= markup)
-        
-        
-        elif message.text == "Посмотреть меню":
-            keyboard = types.InlineKeyboardMarkup()
-            key1 = types.InlineKeyboardButton(text='Капучино 75 рублей', callback_data= "gg")
-            key2 = types.InlineKeyboardButton(text='Американо 110 рублей', callback_data= "gg")
-            key3 = types.InlineKeyboardButton(text='Милкшейк 150 рублей ', callback_data= "gg")
-            key4 = types.InlineKeyboardButton(text='Сэндвич 130 рублей', callback_data= "gg")
-            key5 = types.InlineKeyboardButton(text='Шоколадный Маффин 30 рублей', callback_data= "gg")
-
-            keyboard.add(key1)
-            keyboard.add(key2)
-            keyboard.add(key3)
-            keyboard.add(key4)
-            keyboard.add(key5)
-            bot.send_message(message.chat.id, 'Посмотреть меню', reply_markup=keyboard)
-            bot.delete_message(message.chat.id, message.id)
-        
-        elif message.text == 'Сделать заказ':
-            
-
-            keyboard = types.InlineKeyboardMarkup()
-            key1 = types.InlineKeyboardButton(text='Добавить Капучино', callback_data= f"add {message.chat.id}")
-            key2 = types.InlineKeyboardButton(text='Убрать Капучино', callback_data= f"rem {message.chat.id}")
-            item3 = types.InlineKeyboardButton("Посмотреть заказ", callback_data= "gg")
-            keyboard.add(key1, key2)
-            keyboard.add(item3)
-            ordersORM[message.chat.id] = []
-            bot.send_message(message.chat.id, 'Выберите позицию', reply_markup=keyboard)
-           
-          
-
-        elif message.text == 'Посмотреть заказ ':
-            print(ordersORM[message.chat.id])
+  
+        if message.text == 'Посмотреть заказ':
+            print(currentOrder[str(message.chat.id)])
             tmp = ""
-            for i in ordersORM[message.chat.id]:
+            for i in currentOrder[str(message.chat.id)]:
                 tmp += f"{i}\n"
             bot.send_message(message.chat.id, tmp)
             
-            bot.delete_message(message.chat.id, message.id)
+           # bot.delete_message(message.chat.id, message.id)
+
+        elif message.text == 'Оформить заказ':
+            msg = bot.send_message(message.chat.id, 'Через сколько минут вам хотелось бы забрать кофе ?')
+            bot.register_next_step_handler(msg, start_2)
 
        
 
@@ -308,102 +240,67 @@ def bot_message(message):
 def callback_worker(call):
 
     state = call.data.split()[0]
-    
-    if state == "gg":
-        bot.answer_callback_query(call.id)
-        return
-    else:
+    if state == "back":
+        addings[str(call.message.chat.id)] = []
         bot.delete_message(call.message.chat.id, call.message.id)
-        id = int(call.data.split()[1])
-        if state == "add":  
-            ordersORM[id].append('Kапучино')
-            param['Addings'] = []
-            param['Size'] = ""
-            keyboard = types.InlineKeyboardMarkup()
-            key1 = types.InlineKeyboardButton(text='Выбрать размер', callback_data= f"size {call.message.chat.id}")
-            key2 = types.InlineKeyboardButton(text='Выбрать добавку', callback_data= f"adding {call.message.chat.id}")
-            key3 = types.InlineKeyboardButton(text='Добавить позицию', callback_data= f"sendP {call.message.chat.id}")
-            keyboard.add(key1, key2)
-            keyboard.add(key3)
-            bot.send_message(call.message.chat.id, 'Детали заказа', reply_markup=keyboard)
-        elif state == "rem":
-            if (('Kапучино' in ordersORM[id]) == False):
-                
-                    bot.send_message(id, 'У вас и так нет капучино в заказе')
-            else:
-                ordersORM[id].remove('Kапучино')
-        elif state =="size":
-            keyboard = types.InlineKeyboardMarkup()
-            key1 = types.InlineKeyboardButton(text='Средний 100', callback_data= f"med {call.message.chat.id}")
-            key2 = types.InlineKeyboardButton(text='Большой 120', callback_data= f"sml {call.message.chat.id}")
+        conn = sqlite3.connect('sqlite3.db')
+        cursor = conn.cursor()
+
+        query = 'select * from menu where type=0'
+        menu = cursor.execute(query).fetchall()
+
+        keyboard = types.InlineKeyboardMarkup()
+
+        for i in menu:
+            key = types.InlineKeyboardButton(text=f"{i[1]} {i[2]}", callback_data= f"add {i[1]} {i[2]} {call.message.chat.id}")
+            keyboard.add(key)
+
+        bot.send_message(call.message.chat.id, 'Меню: ', reply_markup=keyboard)
+      
+    else:
+        
+        name = call.data.split()[1]
+        price = call.data.split()[2]
+        id = call.data.split()[3]
+        if state == "add":
             
-            keyboard.add(key1, key2)
-            
-            bot.send_message(call.message.chat.id, 'Выберите размер:', reply_markup=keyboard)
-        elif state == "adding":
+            bot.delete_message(call.message.chat.id, call.message.id)
             keyboard = types.InlineKeyboardMarkup()
-            key1 = types.InlineKeyboardButton(text='Шоколадная крошка 15', callback_data= f"addings {call.message.chat.id}")
+            key = types.InlineKeyboardButton(text = "Добавить в заказ", callback_data= f"finalAdd {name} {price} {call.message.chat.id}")
+            key1 = types.InlineKeyboardButton(text = "Добавки",callback_data= f"addings {name} {price} {call.message.chat.id}" )
+            key2 = types.InlineKeyboardButton(text = "Вернуться в меню", callback_data= f"back")
+            keyboard.add(key)
             keyboard.add(key1)
-            bot.send_message(call.message.chat.id, 'Выберите добавку:', reply_markup=keyboard)
-        elif state == "sml":
-            param['Size'] = "Cредний"
-            keyboard = types.InlineKeyboardMarkup()
-            key1 = types.InlineKeyboardButton(text='Выбрать размер', callback_data= f"size {call.message.chat.id}")
-            key2 = types.InlineKeyboardButton(text='Выбрать добавку', callback_data= f"adding {call.message.chat.id}")
-            key3 = types.InlineKeyboardButton(text='Добавить позицию', callback_data= f"sendP {call.message.chat.id}")
-            keyboard.add(key1, key2)
-            keyboard.add(key3)
-            bot.send_message(call.message.chat.id, 'Детали заказа', reply_markup=keyboard)
-        elif state == "med":
-            param['Size'] = "Большой"
-            keyboard = types.InlineKeyboardMarkup()
-            key1 = types.InlineKeyboardButton(text='Выбрать размер', callback_data= f"size {call.message.chat.id}")
-            key2 = types.InlineKeyboardButton(text='Выбрать добавку', callback_data= f"adding {call.message.chat.id}")
-            key3 = types.InlineKeyboardButton(text='Добавить позицию', callback_data= f"sendP {call.message.chat.id}")
-            keyboard.add(key1, key2)
-            keyboard.add(key3)
-            bot.send_message(call.message.chat.id, 'Детали заказа', reply_markup=keyboard)
-           
-            
+            keyboard.add(key2)
+            bot.send_message(call.message.chat.id, f"{name}", reply_markup=keyboard)
+
         elif state == "addings":
-            param['Addings'].append("Sugar")
-            keyboard = types.InlineKeyboardMarkup()
-            key1 = types.InlineKeyboardButton(text='Выбрать размер', callback_data= f"size {call.message.chat.id}")
-            key2 = types.InlineKeyboardButton(text='Выбрать добавку', callback_data= f"adding {call.message.chat.id}")
-            key3 = types.InlineKeyboardButton(text='Добавить позицию', callback_data= f"sendP {call.message.chat.id}")
-            keyboard.add(key1, key2)
-            keyboard.add(key3)
-            bot.send_message(call.message.chat.id, 'Детали заказа', reply_markup=keyboard)
-        elif state == "sendP":
-            keyboard = types.InlineKeyboardMarkup()
-            key1 = types.InlineKeyboardButton(text='Добавить Капучино', callback_data= f"add {call.message.chat.id}")
-            key2 = types.InlineKeyboardButton(text='Убрать Капучино', callback_data= f"rem {call.message.chat.id}")
-            item3 = types.InlineKeyboardButton("Посмотреть заказ", callback_data= f"check {call.message.chat.id}")
-            item4 = types.InlineKeyboardButton("Отправить заказ", callback_data= f"sendO {call.message.chat.id}")
-            keyboard.add(key1, key2)
-            keyboard.add(item3, item4)
-            
-            bot.send_message(call.message.chat.id, 'Выберите позицию:', reply_markup=keyboard)
-        elif state == "sendO":  
-            msg = bot.send_message(call.message.chat.id, 'Через сколько минут вам хотелось бы забрать кофе')
-            bot.register_next_step_handler(msg, start_2)
-            
-        elif state == "check":
-            str1 = ""
-            for i in param['Addings']:
-                if (i == "Sugar"):
-                    str1 +=  "Шоколадная крошка "
-            
-            bot.send_message(call.message.chat.id, f'Позиции: {ordersORM[id][0]}\n Размер: {param["Size"]} \n Добавки: {str1} ')
-            keyboard = types.InlineKeyboardMarkup()
-            key1 = types.InlineKeyboardButton(text='ДА', callback_data= f"sendO {call.message.chat.id}")
-            keyboard.add(key1)
-            bot.send_message(call.message.chat.id, 'Отправить заказ ?', reply_markup=keyboard)
+            bot.delete_message(call.message.chat.id, call.message.id)
+            conn = sqlite3.connect('sqlite3.db')
+            cursor = conn.cursor()
 
+            query = 'select * from menu where type=1'
+            menu = cursor.execute(query).fetchall()
+            print(menu)
+            keyboard = types.InlineKeyboardMarkup()
 
-    print(ordersORM[id])
-    print(id)
-    print(param)
+            for i in menu:
+                key = types.InlineKeyboardButton(text=f"Добавить {i[1]} за {i[2]}", callback_data= f"newAdding  {i[1]} {i[2]} {call.message.chat.id}")
+                keyboard.add(key)
+
+            key = types.InlineKeyboardButton(text="Назад", callback_data=f"add {name} {price} {call.message.chat.id}")
+            keyboard.add(key)
+
+            bot.send_message(call.message.chat.id, 'Добавки: ', reply_markup=keyboard)
+        elif state == "finalAdd":
+            
+            currentOrder[str(id)].append([f"{name}", f"{price}", addings[str(id)]])
+            bot.send_message(call.message.chat.id, f"В ваш добавлен: \n {name} {price}")
+            print(currentOrder[str(id)])
+            addings[str(id)] = []
+        elif state == "newAdding":
+            addings[str(id)].append([name, price])
+            print(addings[str(id)])
     bot.answer_callback_query(call.id)
 
 bot.polling(non_stop= True)
