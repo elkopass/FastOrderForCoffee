@@ -35,16 +35,21 @@ def convert_orders_list_to_string(orders_list):
         # записываем одинаковые заказы в один список
         same_order = [o for o in filtered_orders_list if o[0] == orders]
 
+        same_position = []
+
         # достаем список названий элементов из одного заказа
         coffee_list = []
         for order in same_order:
-            coffee_list.append(order[5])
+            if order[2] not in same_position:
+                coffee_list.append(order[5])
+                same_position.append(order[2])
 
         # # формируем отформатированный список
         orders_string += f'/{same_order[0][0]} | Напитки: {", ".join(coffee_list)} ' \
                          f'| Время: {same_order[0][4]} | Статус: {convert_status(same_order[0][3])}\n'
 
     return orders_string
+
 
 def convert_order_to_string(order):
     # если заказа с данным кодом не существует, возвращаем None
