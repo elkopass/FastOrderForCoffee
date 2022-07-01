@@ -186,20 +186,20 @@ def start_2(message):
     
     curOrderId = cursor.lastrowid
     for i in (currentOrder[str(message.chat.id)]):
-        cursor.execute("insert into positions (size) values (1)")
-        positionsId = cursor.lastrowid
-        query = f"insert into pos_ord (pos_id, ord_id) values ({positionsId},{curOrderId})"
+        
+        
+        query = f"insert into pos_ord (ord_id) values ({curOrderId})"
         cursor.execute(query)
+        positionsId = cursor.lastrowid
         menuId = cursor.execute(f"select id from menu where name = '{i[0]}'").fetchone()[0] 
         print(i[0], i[1], i[2])
         print(type(i[2]))
         print(type(list(i[2])))
-        for j in i[2]:
-            print(j)
-            if i[2] == []:
-                query = f"insert into drink_add (drink_id, pos_id) values ({menuId},{positionsId})"
-                cursor.execute(query)
-            else:    
+        if len(i[2]) == 0:
+            query = f"insert into drink_add (drink_id, pos_id) values ({menuId},{positionsId})"
+            cursor.execute(query)
+        else:    
+            for j in i[2]:
                 addId = cursor.execute(f"select id from menu where name = '{j[0]}'").fetchone()[0] 
                 query = f"insert into drink_add (drink_id, add_id, pos_id) values ({menuId}, {addId}, {positionsId})"
                 cursor.execute(query)

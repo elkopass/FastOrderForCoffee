@@ -34,24 +34,20 @@ def orders(message):
 
     # Ниже запросы, за которые меня убил бы Бабанов
     query_not_addition = '''
-    select D.id, D.userId, D.pos_id, D.status, D.time, D.code, D.size, D.name, D.add_id  as 'add_name', D.price from 
+    select D.id, D.userId, D.pos_id, D.status, D.time, D.name, D.add_id  as 'add_name', D.price from 
 	(select * from orders 
 	join pos_ord on orders.id = pos_ord.ord_id
-	join positions on pos_ord.pos_id = positions.id
 	join drink_add on pos_ord.pos_id = drink_add.pos_id
 	join menu on drink_id = menu.id) as D
-	where D.add_id is null
-    '''
+	where D.add_id is null'''
 
     query_addition = '''
-    select D.id, D.userId, D.pos_id, D.status, D.time, D.code, D.size, D.name, menu.name as 'add_name', D.price from 
+    select D.id, D.userId, D.pos_id, D.status, D.time, D.name, menu.name as 'add_name', D.price from 
 	(select * from orders 
 	join pos_ord on orders.id = pos_ord.ord_id
-	join positions on pos_ord.pos_id = positions.id
 	join drink_add on pos_ord.pos_id = drink_add.pos_id
 	join menu on drink_id = menu.id) as D
-	join menu on add_id = menu.id
-    '''
+	join menu on add_id = menu.id'''
 
     orders_list = cursor.execute(query_not_addition).fetchall()
     orders_list.extend(cursor.execute(query_addition).fetchall())
@@ -76,25 +72,23 @@ def order(message):
         order_code = int(message.text[1:])
 
         query_not_addition = f'''
-        select D.id, D.userId, D.pos_id, D.status, D.time, D.code, D.size, D.name, D.add_id as 'add_name', D.price, D.add_id as 'add_price', D.rating from 
+        select D.id, D.userId, D.pos_id, D.status, D.time, D.uId, D.name, D.add_id as 'add_name', D.price, D.add_id as 'add_price', D.rating from 
 	    (select * from orders 
 	    join pos_ord on orders.id = pos_ord.ord_id
-	    join positions on pos_ord.pos_id = positions.id
 	    join drink_add on pos_ord.pos_id = drink_add.pos_id
 	    join menu on drink_id = menu.id
-	    join users on orders.userId = users.id) as D
-	    where D.add_id is null and D.code = {order_code}
+	    join (select id, userId as 'uId', rating from users) as U on orders.userId = U.id) as D
+	    where D.add_id is null and D.id = {order_code}
         '''
 
         query_addition = f'''
-        select D.id, D.userId, D.pos_id, D.status, D.time, D.code, D.size, D.name, menu.name as 'add_name', D.price, menu.price as 'add_price', D.rating from 
+        select D.id, D.userId, D.pos_id, D.status, D.time,  D.uId, D.name, menu.name as 'add_name', D.price, menu.price as 'add_price', D.rating from 
 	    (select * from orders 
 	    join pos_ord on orders.id = pos_ord.ord_id
-	    join positions on pos_ord.pos_id = positions.id
 	    join drink_add on pos_ord.pos_id = drink_add.pos_id
 	    join menu on drink_id = menu.id
-	    join users on orders.userId = users.id) as D
-	    join menu on add_id = menu.id and D.code = {order_code}
+	    join (select id, userId as 'uId', rating from users) as U on orders.userId = U.id) as D
+	    join menu on add_id = menu.id and D.id = {order_code}
         '''
 
         this_order = cursor.execute(query_not_addition).fetchall()
@@ -103,7 +97,7 @@ def order(message):
         order_string, status = convert_order_to_string(this_order)
 
         if order_string == None:
-            error_string = f'Заказ с кодом {order_code} не найден'
+            error_string = f'Заказ с id {order_code} не найден'
             bot.send_message(message.chat.id, error_string)
         else:
             keyboard = types.InlineKeyboardMarkup()
@@ -173,11 +167,11 @@ def callback_worker(call):
         bot.send_message(call.message.chat.id, f'Вы оценили заказ /{order_code} на {callback_data[2]} звезд. Спасибо!')
 
     if state != 'rate':
-        query = f'update orders set status = {state_db} where code = {order_code}'
+        query = f'update orders set status = {state_db} where id = {order_code}'
         cursor.execute(query)
     else:
         stars = int(callback_data[2])
-        query_get_user = f'select userId from orders where code = {int(order_code)}'
+        query_get_user = f'select userId from orders where id = {int(order_code)}'
         user_id = cursor.execute(query_get_user).fetchone()[0]
         query_user_rating = f'select rating from users where id = {user_id}'
         rating = cursor.execute(query_user_rating).fetchone()[0]

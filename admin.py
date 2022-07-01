@@ -32,7 +32,8 @@ def edit_name(message, idx):
     else:
         conn = sqlite3.connect('sqlite3.db')
         cursor = conn.cursor()
-        query = f'update menu set name = "{message.text}" where id = {idx}'
+        edited_name = '_'.join(message.text.split())
+        query = f'update menu set name = "{edited_name}" where id = {idx}'
         cursor.execute(query)
         bot.send_message(message.chat.id, 'Изменения сохранены')
         conn.commit()
@@ -228,7 +229,8 @@ def callback_worker(call):
         bot.register_next_step_handler(call.message, get_name)
 
     elif callback_data[0] == 'confirm':
-        query = f'insert into menu (name, price, type) values ("{name}", {price}, {type})'
+        formated_name = '_'.join(name.split())
+        query = f'insert into menu (name, price, type) values ("{formated_name}", {price}, {type})'
 
         cursor.execute(query)
 
