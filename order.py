@@ -8,7 +8,7 @@ from datetime import datetime
 import sqlite3
 from sqlite3 import Error
 from sqlalchemy import MetaData, Table, String, Integer, Column, Text, DateTime, Boolean, ForeignKey, null
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import insert, select
 from sqlalchemy import  create_engine
 
@@ -166,14 +166,21 @@ def start_2(message):
     print(currentOrder[str(message.chat.id)])
     
     #добавляем в БД заказ
-
+    finT = current_datetime + timedelta(minutes=timeOfWait)
+    tmp = finT.minute
+    if(tmp > 0 and tmp < 10):
+        finT = str(finT.hour) + str(':') + '0' + str(finT.minute)
+    else:
+        finT = str(finT.hour) + str(':') + str(finT.minute)
+    print(type(finT))
+    print(finT)
     conn = sqlite3.connect('sqlite3.db')
     cursor = conn.cursor()
     query = f"select id from users where userId = {message.chat.id}"
     print(query)
     idBD = cursor.execute(query).fetchone()[0]
     print(idBD)
-    query = f"insert into orders (userId, status, time) values ({idBD},0,{timeOfWait})"
+    query = f"insert into orders (userId, status, time) values ({idBD},0,'{finT}')"
     print(query)
     cursor.execute(query)
     
@@ -222,16 +229,44 @@ def bot_message(message):
   
         if message.text == 'Посмотреть заказ':
             print(currentOrder[str(message.chat.id)])
-            tmp = ""
-            for i in currentOrder[str(message.chat.id)]:
-                tmp += f"{i}\n"
-            bot.send_message(message.chat.id, tmp)
+            
+            # tmp = ""
+            # for i in currentOrder[str(message.chat.id)]:
+                
+            #     tmp += f"{i[0]} за  {i[1]} рублей "
+            #     if(i[2] != []):
+            #         tmp += "с добавками : \n"
+            #     else: 
+            #         tmp += '\n'
+            #     for j in i[2]:
+            #         tmp += f"{j[0]} за {j[1]} рублей \n"
+            keyboard = types.InlineKeyboardMarkup() 
+            tmp = 0
+            for i in currentOrder[str(message.chat.id)]:  
+                key = types.InlineKeyboardButton(text = f"{i[0]} {i[1]}", callback_data= f"look {tmp} {message.chat.id}") 
+                keyboard.add(key)
+
+                tmp += 1
+            bot.send_message(message.chat.id, "Ваш заказ:", reply_markup=keyboard)
             
            # bot.delete_message(message.chat.id, message.id)
 
         elif message.text == 'Оформить заказ':
-            msg = bot.send_message(message.chat.id, 'Через сколько минут вам хотелось бы забрать кофе ?')
-            bot.register_next_step_handler(msg, start_2)
+            curPrice = 0
+            print(currentOrder[str(message.chat.id)])
+            for i in currentOrder[str(message.chat.id)]:
+                curPrice += int(i[1])
+                for j in i[2]:
+                    curPrice += int(j[1])
+
+            keyboard = types.InlineKeyboardMarkup()
+            key = types.InlineKeyboardButton(text = "Да", callback_data= f"send {message.chat.id}")
+            key1 = types.InlineKeyboardButton(text = "Назад", callback_data= f"back  {message.chat.id}")
+            keyboard.add(key)
+            keyboard.add(key1)
+            bot.send_message(message.chat.id, f"Ваш заказ будет стоить {curPrice} рублей. \n Оформить заказ?", reply_markup=keyboard)
+            print(curPrice)
+           
 
        
 
@@ -241,6 +276,7 @@ def callback_worker(call):
 
     state = call.data.split()[0]
     if state == "back":
+        
         addings[str(call.message.chat.id)] = []
         bot.delete_message(call.message.chat.id, call.message.id)
         conn = sqlite3.connect('sqlite3.db')
@@ -256,7 +292,52 @@ def callback_worker(call):
             keyboard.add(key)
 
         bot.send_message(call.message.chat.id, 'Меню: ', reply_markup=keyboard)
-      
+
+    elif state == "send":
+        
+        msg = bot.send_message(call.message.chat.id, 'Через сколько минут вам хотелось бы забрать кофе ?')
+        bot.register_next_step_handler(msg, start_2)
+
+    elif state == "look":
+        id = call.data.split()[1]
+        keyboard = types.InlineKeyboardMarkup()
+        key = types.InlineKeyboardButton(text=f"Удалить позицию", callback_data= f"del {id} {call.message.chat.id}")
+        keyboard.add(key)
+        tmp = 0
+        for i in currentOrder[str(call.message.chat.id)][int(id)][2]:
+            key = types.InlineKeyboardButton(text=f" Удалить {i[0]} стоимостью {i[1]} рублей", callback_data= f"delAdd {id} {tmp} {call.message.chat.id}")
+            keyboard.add(key)
+            tmp += 1
+
+        bot.send_message(call.message.chat.id, f"{currentOrder[str(call.message.chat.id)][int(id)][0]} {currentOrder[str(call.message.chat.id)][int(id)][1]}", reply_markup=keyboard)
+
+    elif state == "delAdd":
+        id = call.data.split()[1]
+        idAdd = call.data.split()[2]
+        currentOrder[str(call.message.chat.id)][int(id)][2].pop(int(idAdd))
+
+        keyboard = types.InlineKeyboardMarkup() 
+        tmp = 0
+        for i in currentOrder[str(call.message.chat.id)]:  
+            key = types.InlineKeyboardButton(text = f"{i[0]} {i[1]}", callback_data= f"look {tmp} {call.message.chat.id}") 
+            keyboard.add(key)
+
+            tmp += 1
+        bot.send_message(call.message.chat.id, "Ваш заказ:", reply_markup=keyboard)
+
+    elif state == "del":
+
+        id = call.data.split()[1]
+        currentOrder[str(call.message.chat.id)].pop(int(id))
+
+        keyboard = types.InlineKeyboardMarkup() 
+        tmp = 0
+        for i in currentOrder[str(call.message.chat.id)]:  
+            key = types.InlineKeyboardButton(text = f"{i[0]} {i[1]}", callback_data= f"look {tmp} {call.message.chat.id}") 
+            keyboard.add(key)
+
+            tmp += 1
+        bot.send_message(call.message.chat.id, "Ваш заказ:", reply_markup=keyboard)
     else:
         
         name = call.data.split()[1]
@@ -272,7 +353,7 @@ def callback_worker(call):
             keyboard.add(key)
             keyboard.add(key1)
             keyboard.add(key2)
-            bot.send_message(call.message.chat.id, f"{name}", reply_markup=keyboard)
+            bot.send_message(call.message.chat.id, f"{name} {price}", reply_markup=keyboard)
 
         elif state == "addings":
             bot.delete_message(call.message.chat.id, call.message.id)
@@ -285,7 +366,7 @@ def callback_worker(call):
             keyboard = types.InlineKeyboardMarkup()
 
             for i in menu:
-                key = types.InlineKeyboardButton(text=f"Добавить {i[1]} за {i[2]}", callback_data= f"newAdding  {i[1]} {i[2]} {call.message.chat.id}")
+                key = types.InlineKeyboardButton(text=f"Добавить {i[1]} за {i[2]} рублей", callback_data= f"newAdding  {i[1]} {i[2]} {call.message.chat.id}")
                 keyboard.add(key)
 
             key = types.InlineKeyboardButton(text="Назад", callback_data=f"add {name} {price} {call.message.chat.id}")
@@ -295,12 +376,13 @@ def callback_worker(call):
         elif state == "finalAdd":
             
             currentOrder[str(id)].append([f"{name}", f"{price}", addings[str(id)]])
-            bot.send_message(call.message.chat.id, f"В ваш добавлен: \n {name} {price}")
+            bot.send_message(call.message.chat.id, f" заказ добавлен: \n {name} {price}")
             print(currentOrder[str(id)])
             addings[str(id)] = []
         elif state == "newAdding":
             addings[str(id)].append([name, price])
             print(addings[str(id)])
+
     bot.answer_callback_query(call.id)
 
 bot.polling(non_stop= True)
